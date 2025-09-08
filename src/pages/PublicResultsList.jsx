@@ -33,7 +33,11 @@ function PublicResultsList() {
                 semester: clsData.semester,
                 division: clsData.division,
                 name: test.name,
+<<<<<<< HEAD
                 date: test.date || "01 Jan 2025"
+=======
+                totalMarks: test.totalMarks || 100
+>>>>>>> 196fe26d2ab28d908c9ea2e32d6c07a0090c325a
               });
             }
           });
@@ -62,10 +66,20 @@ function PublicResultsList() {
     <>
       <div className="page-header">
         <div className="container">
+<<<<<<< HEAD
           <h1>Results</h1>
         </div>
       </div>
 
+=======
+          <h1>Published Test Results</h1>
+          <p style={{ margin: 0, opacity: 0.9 }}>
+            Select a test to view your results
+          </p>
+        </div>
+      </div>
+      
+>>>>>>> 196fe26d2ab28d908c9ea2e32d6c07a0090c325a
       <div className="container">
         <ErrorMessage message={error} onRetry={() => window.location.reload()} />
 
@@ -77,6 +91,7 @@ function PublicResultsList() {
             </p>
           </div>
         ) : (
+<<<<<<< HEAD
           <div className="card" style={{ padding: "20px" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
@@ -104,6 +119,33 @@ function PublicResultsList() {
                 ))}
               </tbody>
             </table>
+=======
+          <div className="card">
+            <h2 className="mb-3">Available Test Results</h2>
+            <div className="grid">
+              {publishedTests.map((test, idx) => (
+                <div
+                  key={idx}
+                  className="test-card"
+                  onClick={() => navigate(`/results/${test.classId}/${test.testId}`)}
+                >
+                  <h3>{test.name}</h3>
+                  <p>{test.className}</p>
+                  <p style={{ fontSize: "0.9rem", color: "#666" }}>
+                    {test.branch} - Semester {test.semester} - Division {test.division}
+                  </p>
+                  <div className="status-badge published">
+                    Published
+                  </div>
+                  <div className="mt-2">
+                    <button className="btn btn-primary btn-small">
+                      View Results
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+>>>>>>> 196fe26d2ab28d908c9ea2e32d6c07a0090c325a
           </div>
         )}
       </div>
