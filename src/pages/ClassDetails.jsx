@@ -2,6 +2,9 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
 import { db } from "../firebaseConfig";
+import LoadingSpinner from "../components/LoadingSpinner";
+import ErrorMessage from "../components/ErrorMessage";
+import SuccessMessage from "../components/SuccessMessage";
 
 import AddStudentDialog from "../components/AddStudentDialog";
 import EditStudentDialog from "../components/EditStudentDialog";
@@ -18,6 +21,9 @@ function ClassDetails() {
   const [students, setStudents] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [tests, setTests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const [activeTab, setActiveTab] = useState("students");
 
@@ -31,263 +37,432 @@ function ClassDetails() {
 
   // Fetch class info
   const fetchClass = async () => {
-    const snapshot = await getDocs(collection(db, "classes"));
-    const docSnap = snapshot.docs.find(doc => doc.id === classId);
-    if (docSnap) setClassInfo({ id: docSnap.id, ...docSnap.data() });
+    try {
+      const snapshot = await getDocs(collection(db, "classes"));
+      const docSnap = snapshot.docs.find(doc => doc.id === classId);
+      if (docSnap) setClassInfo({ id: docSnap.id, ...docSnap.data() });
+    } catch (err) {
+      console.error("Error fetching class:", err);
+      setError("Failed to load class information.");
+    }
   };
 
   // Fetch students, subjects, tests
   const fetchStudents = async () => {
-    const snapshot = await getDocs(collection(db, "classes", classId, "students"));
-    setStudents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    try {
+      const snapshot = await getDocs(collection(db, "classes", classId, "students"));
+      setStudents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    } catch (err) {
+      console.error("Error fetching students:", err);
+      setError("Failed to load students.");
+    }
   };
 
   const fetchSubjects = async () => {
-    const snapshot = await getDocs(collection(db, "classes", classId, "subjects"));
-    setSubjects(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    try {
+      const snapshot = await getDocs(collection(db, "classes", classId, "subjects"));
+      setSubjects(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    } catch (err) {
+      console.error("Error fetching subjects:", err);
+      setError("Failed to load subjects.");
+    }
   };
 
   const fetchTests = async () => {
-    const snapshot = await getDocs(collection(db, "classes", classId, "tests"));
-    setTests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    try {
+      const snapshot = await getDocs(collection(db, "classes", classId, "tests"));
+      setTests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    } catch (err) {
+      console.error("Error fetching tests:", err);
+      setError("Failed to load tests.");
+    }
+  };
+
+  const fetchAllData = async () => {
+    setLoading(true);
+    setError("");
+    await Promise.all([fetchClass(), fetchStudents(), fetchSubjects(), fetchTests()]);
+    setLoading(false);
   };
 
   useEffect(() => {
-    fetchClass();
-    fetchStudents();
-    fetchSubjects();
-    fetchTests();
+    fetchAllData();
   }, []);
 
   // Students CRUD
   const addStudent = async (data) => {
-    await addDoc(collection(db, "classes", classId, "students"), data);
-    setAddStudentOpen(false);
-    fetchStudents();
+    try {
+      await addDoc(collection(db, "classes", classId, "students"), data);
+      setAddStudentOpen(false);
+      setSuccess("Student added successfully!");
+      setTimeout(() => setSuccess(""), 3000);
+      fetchStudents();
+    } catch (err) {
+      console.error("Error adding student:", err);
+      setError("Failed to add student.");
+    }
   };
 
   const updateStudent = async (id, data) => {
-    await updateDoc(doc(db, "classes", classId, "students", id), data);
-    setEditStudentData(null);
-    fetchStudents();
+    try {
+      await updateDoc(doc(db, "classes", classId, "students", id), data);
+      setEditStudentData(null);
+      setSuccess("Student updated successfully!");
+      setTimeout(() => setSuccess(""), 3000);
+      fetchStudents();
+    } catch (err) {
+      console.error("Error updating student:", err);
+      setError("Failed to update student.");
+    }
   };
 
   const deleteStudent = async (id) => {
     if (window.confirm("Delete this student?")) {
-      await deleteDoc(doc(db, "classes", classId, "students", id));
-      fetchStudents();
+      try {
+        await deleteDoc(doc(db, "classes", classId, "students", id));
+        setSuccess("Student deleted successfully!");
+        setTimeout(() => setSuccess(""), 3000);
+        fetchStudents();
+      } catch (err) {
+        console.error("Error deleting student:", err);
+        setError("Failed to delete student.");
+      }
     }
   };
 
   // Subjects CRUD
   const addSubject = async (data) => {
-    await addDoc(collection(db, "classes", classId, "subjects"), data);
-    setAddSubjectOpen(false);
-    fetchSubjects();
+    try {
+      await addDoc(collection(db, "classes", classId, "subjects"), data);
+      setAddSubjectOpen(false);
+      setSuccess("Subject added successfully!");
+      setTimeout(() => setSuccess(""), 3000);
+      fetchSubjects();
+    } catch (err) {
+      console.error("Error adding subject:", err);
+      setError("Failed to add subject.");
+    }
   };
 
   const updateSubject = async (id, data) => {
-    await updateDoc(doc(db, "classes", classId, "subjects", id), data);
-    setEditSubjectData(null);
-    fetchSubjects();
+    try {
+      await updateDoc(doc(db, "classes", classId, "subjects", id), data);
+      setEditSubjectData(null);
+      setSuccess("Subject updated successfully!");
+      setTimeout(() => setSuccess(""), 3000);
+      fetchSubjects();
+    } catch (err) {
+      console.error("Error updating subject:", err);
+      setError("Failed to update subject.");
+    }
   };
 
   const deleteSubject = async (id) => {
     if (window.confirm("Delete this subject?")) {
-      await deleteDoc(doc(db, "classes", classId, "subjects", id));
-      fetchSubjects();
+      try {
+        await deleteDoc(doc(db, "classes", classId, "subjects", id));
+        setSuccess("Subject deleted successfully!");
+        setTimeout(() => setSuccess(""), 3000);
+        fetchSubjects();
+      } catch (err) {
+        console.error("Error deleting subject:", err);
+        setError("Failed to delete subject.");
+      }
     }
   };
 
   // Tests CRUD
   const addTest = async (data) => {
-    await addDoc(collection(db, "classes", classId, "tests"), data);
-    setAddTestOpen(false);
-    fetchTests();
+    try {
+      await addDoc(collection(db, "classes", classId, "tests"), data);
+      setAddTestOpen(false);
+      setSuccess("Test created successfully!");
+      setTimeout(() => setSuccess(""), 3000);
+      fetchTests();
+    } catch (err) {
+      console.error("Error creating test:", err);
+      setError("Failed to create test.");
+    }
   };
 
-  if (!classInfo) return <div style={{ padding: "20px" }}>Loading class...</div>;
+  if (loading) {
+    return <LoadingSpinner text="Loading class details..." />;
+  }
 
-  return (
-    <div style={{ maxWidth: "900px", margin: "20px auto", fontFamily: "Arial, sans-serif", color: "#333" }}>
-      <h1 style={{ borderBottom: "2px solid #ccc", paddingBottom: "8px" }}>
-        Class: {classInfo.className} ({classInfo.branch}-{classInfo.semester}-{classInfo.division})
-      </h1>
-
-      {/* Tabs */}
-      <div style={{ display: "flex", marginTop: "20px", borderBottom: "1px solid #ccc" }}>
-        <button
-          onClick={() => setActiveTab("students")}
-          style={{
-            padding: "10px 20px",
-            border: "none",
-            borderBottom: activeTab === "students" ? "3px solid #000" : "none",
-            background: "none",
-            cursor: "pointer",
-            fontWeight: activeTab === "students" ? "bold" : "normal"
-          }}
-        >
-          Students
-        </button>
-        <button
-          onClick={() => setActiveTab("subjects")}
-          style={{
-            padding: "10px 20px",
-            border: "none",
-            borderBottom: activeTab === "subjects" ? "3px solid #000" : "none",
-            background: "none",
-            cursor: "pointer",
-            fontWeight: activeTab === "subjects" ? "bold" : "normal"
-          }}
-        >
-          Subjects
-        </button>
-        <button
-          onClick={() => setActiveTab("tests")}
-          style={{
-            padding: "10px 20px",
-            border: "none",
-            borderBottom: activeTab === "tests" ? "3px solid #000" : "none",
-            background: "none",
-            cursor: "pointer",
-            fontWeight: activeTab === "tests" ? "bold" : "normal"
-          }}
-        >
-          Tests
+  if (!classInfo) {
+    return (
+      <div className="container">
+        <ErrorMessage message="Class not found" />
+        <button onClick={() => navigate("/")} className="btn btn-primary">
+          Back to Dashboard
         </button>
       </div>
+    );
+  }
 
-      {/* Students Tab */}
-      {activeTab === "students" && (
-        <div style={{ marginTop: "20px" }}>
-          <button
-            onClick={() => setAddStudentOpen(true)}
-            style={{ padding: "8px 16px", marginBottom: "10px", cursor: "pointer", borderRadius: "4px", border: "1px solid #ccc" }}
-          >
-            Add Student
-          </button>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ backgroundColor: "#f5f5f5" }}>
-                <th style={{ border: "1px solid #ccc", padding: "8px" }}>Name</th>
-                <th style={{ border: "1px solid #ccc", padding: "8px" }}>Enrollment Number</th>
-                <th style={{ border: "1px solid #ccc", padding: "8px" }}>Phone Number</th>
-                <th style={{ border: "1px solid #ccc", padding: "8px" }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {students.length === 0 && (
-                <tr>
-                  <td colSpan="4" style={{ border: "1px solid #ccc", padding: "8px", textAlign: "center" }}>No students added.</td>
-                </tr>
-              )}
-              {students.map(s => (
-                <tr key={s.id}>
-                  <td style={{ border: "1px solid #ccc", padding: "8px" }}>{s.name}</td>
-                  <td style={{ border: "1px solid #ccc", padding: "8px" }}>{s.enrollmentNumber}</td>
-                  <td style={{ border: "1px solid #ccc", padding: "8px" }}>{s.phoneNumber}</td>
-                  <td style={{ border: "1px solid #ccc", padding: "8px" }}>
-                    <button onClick={() => setEditStudentData(s)} style={{ marginRight: "5px" }}>Edit</button>
-                    <button onClick={() => deleteStudent(s.id)}>Delete</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+  return (
+    <>
+      <div className="page-header">
+        <div className="container">
+          <h1>
+            {classInfo.className}
+          </h1>
+          <p style={{ margin: 0, opacity: 0.9 }}>
+            {classInfo.branch} - Semester {classInfo.semester} - Division {classInfo.division}
+          </p>
         </div>
-      )}
+      </div>
+      
+      <div className="container">
+        <ErrorMessage message={error} onRetry={fetchAllData} />
+        <SuccessMessage message={success} />
 
-      {/* Subjects Tab */}
-      {activeTab === "subjects" && (
-        <div style={{ marginTop: "20px" }}>
-          <button
-            onClick={() => setAddSubjectOpen(true)}
-            style={{ padding: "8px 16px", marginBottom: "10px", cursor: "pointer", borderRadius: "4px", border: "1px solid #ccc" }}
+        {/* Navigation */}
+        <div className="d-flex justify-content-between align-items-center mb-3">
+          <button 
+            onClick={() => navigate("/")} 
+            className="btn btn-secondary"
           >
-            Add Subject
+            ← Back to Dashboard
           </button>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ backgroundColor: "#f5f5f5" }}>
-                <th style={{ border: "1px solid #ccc", padding: "8px" }}>Subject Name</th>
-                <th style={{ border: "1px solid #ccc", padding: "8px" }}>Subject Code</th>
-                <th style={{ border: "1px solid #ccc", padding: "8px" }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {subjects.length === 0 && (
-                <tr>
-                  <td colSpan="3" style={{ border: "1px solid #ccc", padding: "8px", textAlign: "center" }}>No subjects added.</td>
-                </tr>
-              )}
-              {subjects.map(sub => (
-                <tr key={sub.id}>
-                  <td style={{ border: "1px solid #ccc", padding: "8px" }}>{sub.name}</td>
-                  <td style={{ border: "1px solid #ccc", padding: "8px" }}>{sub.code}</td>
-                  <td style={{ border: "1px solid #ccc", padding: "8px" }}>
-                    <button onClick={() => setEditSubjectData(sub)} style={{ marginRight: "5px" }}>Edit</button>
-                    <button onClick={() => deleteSubject(sub.id)}>Delete</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
-      )}
 
-      {/* Tests Tab */}
-      {activeTab === "tests" && (
-        <div style={{ marginTop: "20px" }}>
+        {/* Tabs */}
+        <div className="tabs">
           <button
-            onClick={() => setAddTestOpen(true)}
-            style={{ padding: "8px 16px", marginBottom: "10px", cursor: "pointer", borderRadius: "4px", border: "1px solid #ccc" }}
+            onClick={() => setActiveTab("students")}
+            className={`tab ${activeTab === "students" ? "active" : ""}`}
           >
-            Create Test
+            Students ({students.length})
           </button>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-            {tests.length === 0 && <div>No tests created yet.</div>}
-            {tests.map(test => (
-              <div key={test.id} style={{ padding: "15px", border: "1px solid #ccc", borderRadius: "4px", minWidth: "150px", textAlign: "center", backgroundColor: "#f9f9f9", position: "relative" }}>
-                <div onClick={() => navigate(`/class/${classId}/enter-marks/${test.id}`)} style={{ cursor: "pointer" }}>
-                  <div style={{ fontWeight: "bold" }}>{test.name}</div>
-                  <div>Total Marks: {test.totalMarks || 100}</div>
-                  <div>Status: {test.published ? "Published" : "Draft"}</div>
-                </div>
-                <div style={{ position: "absolute", top: "5px", right: "5px", display: "flex", gap: "5px" }}>
-                  <button onClick={() => setEditTestData(test)} style={{ cursor: "pointer" }}>Edit</button>
-                  <button onClick={async () => {
-                    if (window.confirm("Delete this test?")) {
-                      await deleteDoc(doc(db, "classes", classId, "tests", test.id));
-                      fetchTests();
-                    }
-                  }}>Delete</button>
-                </div>
+          <button
+            onClick={() => setActiveTab("subjects")}
+            className={`tab ${activeTab === "subjects" ? "active" : ""}`}
+          >
+            Subjects ({subjects.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("tests")}
+            className={`tab ${activeTab === "tests" ? "active" : ""}`}
+          >
+            Tests ({tests.length})
+          </button>
+        </div>
+
+        {/* Students Tab */}
+        {activeTab === "students" && (
+          <div className="card">
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <h3 className="mb-0">Students</h3>
+              <button
+                onClick={() => setAddStudentOpen(true)}
+                className="btn btn-primary"
+              >
+                Add Student
+              </button>
+            </div>
+            
+            {students.length === 0 ? (
+              <div className="text-center" style={{ padding: "40px 0", color: "#666" }}>
+                <p>No students added yet.</p>
+                <p>Click "Add Student" to get started.</p>
               </div>
-            ))}
+            ) : (
+              <div className="table-container">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Enrollment Number</th>
+                      <th className="hide-mobile">Phone Number</th>
+                      <th className="text-center">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {students.map(s => (
+                      <tr key={s.id}>
+                        <td>{s.name}</td>
+                        <td>{s.enrollmentNumber}</td>
+                        <td className="hide-mobile">{s.phoneNumber}</td>
+                        <td className="text-center">
+                          <div className="d-flex gap-1 justify-content-center">
+                            <button 
+                              onClick={() => setEditStudentData(s)} 
+                              className="btn btn-secondary btn-small"
+                            >
+                              Edit
+                            </button>
+                            <button 
+                              onClick={() => deleteStudent(s.id)}
+                              className="btn btn-danger btn-small"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Dialogs */}
-      <AddStudentDialog open={addStudentOpen} onClose={() => setAddStudentOpen(false)} onCreate={addStudent} />
-      {editStudentData && (
-        <EditStudentDialog open={true} onClose={() => setEditStudentData(null)} studentData={editStudentData} onUpdate={updateStudent} />
-      )}
+        {/* Subjects Tab */}
+        {activeTab === "subjects" && (
+          <div className="card">
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <h3 className="mb-0">Subjects</h3>
+              <button
+                onClick={() => setAddSubjectOpen(true)}
+                className="btn btn-primary"
+              >
+                Add Subject
+              </button>
+            </div>
+            
+            {subjects.length === 0 ? (
+              <div className="text-center" style={{ padding: "40px 0", color: "#666" }}>
+                <p>No subjects added yet.</p>
+                <p>Click "Add Subject" to get started.</p>
+              </div>
+            ) : (
+              <div className="table-container">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Subject Name</th>
+                      <th>Subject Code</th>
+                      <th className="text-center">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {subjects.map(sub => (
+                      <tr key={sub.id}>
+                        <td>{sub.name}</td>
+                        <td>{sub.code}</td>
+                        <td className="text-center">
+                          <div className="d-flex gap-1 justify-content-center">
+                            <button 
+                              onClick={() => setEditSubjectData(sub)} 
+                              className="btn btn-secondary btn-small"
+                            >
+                              Edit
+                            </button>
+                            <button 
+                              onClick={() => deleteSubject(sub.id)}
+                              className="btn btn-danger btn-small"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
 
-      <AddSubjectDialog open={addSubjectOpen} onClose={() => setAddSubjectOpen(false)} onCreate={addSubject} />
-      {editSubjectData && (
-        <EditSubjectDialog open={true} onClose={() => setEditSubjectData(null)} subjectData={editSubjectData} onUpdate={updateSubject} />
-      )}
+        {/* Tests Tab */}
+        {activeTab === "tests" && (
+          <div className="card">
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <h3 className="mb-0">Tests</h3>
+              <button
+                onClick={() => setAddTestOpen(true)}
+                className="btn btn-primary"
+              >
+                Create Test
+              </button>
+            </div>
+            
+            {tests.length === 0 ? (
+              <div className="text-center" style={{ padding: "40px 0", color: "#666" }}>
+                <p>No tests created yet.</p>
+                <p>Click "Create Test" to get started.</p>
+              </div>
+            ) : (
+              <div className="grid">
+                {tests.map(test => (
+                  <div key={test.id} className="test-card">
+                    <div className="card-actions">
+                      <button 
+                        onClick={() => setEditTestData(test)} 
+                        className="btn btn-secondary btn-small"
+                      >
+                        Edit
+                      </button>
+                      <button 
+                        onClick={async () => {
+                          if (window.confirm("Delete this test?")) {
+                            try {
+                              await deleteDoc(doc(db, "classes", classId, "tests", test.id));
+                              setSuccess("Test deleted successfully!");
+                              setTimeout(() => setSuccess(""), 3000);
+                              fetchTests();
+                            } catch (err) {
+                              console.error("Error deleting test:", err);
+                              setError("Failed to delete test.");
+                            }
+                          }
+                        }}
+                        className="btn btn-danger btn-small"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                    
+                    <div onClick={() => navigate(`/class/${classId}/enter-marks/${test.id}`)}>
+                      <h3>{test.name}</h3>
+                      <p>Total Marks: {test.totalMarks || 100}</p>
+                      <div className={`status-badge ${test.published ? 'published' : 'draft'}`}>
+                        {test.published ? "Published" : "Draft"}
+                      </div>
+                      <div className="mt-2">
+                        <button className="btn btn-primary btn-small">
+                          Enter Marks
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
-      <AddTestDialog open={addTestOpen} onClose={() => setAddTestOpen(false)} onCreate={addTest} />
-      {editTestData && (
-        <EditTestDialog open={true} onClose={() => setEditTestData(null)} testData={editTestData} onUpdate={async (data) => {
-          await updateDoc(doc(db, "classes", classId, "tests", editTestData.id), data);
-          setEditTestData(null);
-          fetchTests();
-        }} />
-      )}
-    </div>
+        {/* Dialogs */}
+        <AddStudentDialog open={addStudentOpen} onClose={() => setAddStudentOpen(false)} onCreate={addStudent} />
+        {editStudentData && (
+          <EditStudentDialog open={true} onClose={() => setEditStudentData(null)} studentData={editStudentData} onUpdate={updateStudent} />
+        )}
+
+        <AddSubjectDialog open={addSubjectOpen} onClose={() => setAddSubjectOpen(false)} onCreate={addSubject} />
+        {editSubjectData && (
+          <EditSubjectDialog open={true} onClose={() => setEditSubjectData(null)} subjectData={editSubjectData} onUpdate={updateSubject} />
+        )}
+
+        <AddTestDialog open={addTestOpen} onClose={() => setAddTestOpen(false)} onCreate={addTest} />
+        {editTestData && (
+          <EditTestDialog open={true} onClose={() => setEditTestData(null)} testData={editTestData} onUpdate={async (data) => {
+            try {
+              await updateDoc(doc(db, "classes", classId, "tests", editTestData.id), data);
+              setEditTestData(null);
+              setSuccess("Test updated successfully!");
+              setTimeout(() => setSuccess(""), 3000);
+              fetchTests();
+            } catch (err) {
+              console.error("Error updating test:", err);
+              setError("Failed to update test.");
+            }
+          }} />
+        )}
+      </div>
+    </>
   );
 }
 

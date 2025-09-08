@@ -1,92 +1,131 @@
 import { useState } from "react";
+import { useFormValidation, validationRules } from "../hooks/useFormValidation";
+import FormInput from "./FormInput";
 
 function CreateClassDialog({ open, onClose, onCreate }) {
-  const [className, setClassName] = useState("");
-  const [branch, setBranch] = useState("");
-  const [semester, setSemester] = useState("");
-  const [division, setDivision] = useState("");
+  const [loading, setLoading] = useState(false);
+  
+  const {
+    values,
+    errors,
+    touched,
+    handleChange,
+    handleBlur,
+    validateAll,
+    reset
+  } = useFormValidation(
+    {
+      className: "",
+      branch: "",
+      semester: "",
+      division: ""
+    },
+    {
+      className: [validationRules.required],
+      branch: [validationRules.required],
+      semester: [validationRules.required],
+      division: [validationRules.required]
+    }
+  );
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!className.trim() || !branch.trim() || !semester.trim() || !division.trim()) {
-      alert("All fields are required.");
+    
+    if (!validateAll()) {
       return;
     }
-    onCreate({ className, branch, semester, division });
-    setClassName(""); setBranch(""); setSemester(""); setDivision("");
+    
+    setLoading(true);
+    try {
+      await onCreate(values);
+      reset();
+      onClose();
+    } catch (error) {
+      console.error("Error creating class:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClose = () => {
+    reset();
+    onClose();
   };
 
   if (!open) return null;
 
   return (
-    <div style={{
-      position: "fixed",
-      top: 0, left: 0, right: 0, bottom: 0,
-      backgroundColor: "rgba(0,0,0,0.3)",
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "center"
-    }}>
-      <div style={{
-        backgroundColor: "#fff",
-        border: "1px solid #ccc",
-        padding: "20px",
-        width: "320px",
-        borderRadius: "6px",
-        fontFamily: "Arial, sans-serif",
-        boxShadow: "0 4px 8px rgba(0,0,0,0.1)"
-      }}>
-        <h3 style={{ borderBottom: "1px solid #ccc", paddingBottom: "5px", marginBottom: "15px" }}>Create Class</h3>
+    <div className="modal-overlay">
+      <div className="modal">
+        <h3>Create New Class</h3>
         <form onSubmit={handleSubmit}>
-          <input
-            type="text"
-            placeholder="Class Name"
-            value={className}
-            onChange={(e) => setClassName(e.target.value)}
-            style={{ width: "100%", padding: "8px", marginBottom: "10px", border: "1px solid #ccc", borderRadius: "4px" }}
+          <FormInput
+            label="Class Name"
+            name="className"
+            value={values.className}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            error={touched.className ? errors.className : ""}
+            placeholder="e.g., Computer Science"
             required
           />
-          <input
-            type="text"
-            placeholder="Branch"
-            value={branch}
-            onChange={(e) => setBranch(e.target.value)}
-            style={{ width: "100%", padding: "8px", marginBottom: "10px", border: "1px solid #ccc", borderRadius: "4px" }}
+          
+          <FormInput
+            label="Branch"
+            name="branch"
+            value={values.branch}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            error={touched.branch ? errors.branch : ""}
+            placeholder="e.g., CSE"
             required
           />
-          <input
-            type="text"
-            placeholder="Semester"
-            value={semester}
-            onChange={(e) => setSemester(e.target.value)}
-            style={{ width: "100%", padding: "8px", marginBottom: "10px", border: "1px solid #ccc", borderRadius: "4px" }}
+          
+          <FormInput
+            label="Semester"
+            name="semester"
+            value={values.semester}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            error={touched.semester ? errors.semester : ""}
+            placeholder="e.g., 3"
             required
           />
-          <input
-            type="text"
-            placeholder="Division"
-            value={division}
-            onChange={(e) => setDivision(e.target.value)}
-            style={{ width: "100%", padding: "8px", marginBottom: "15px", border: "1px solid #ccc", borderRadius: "4px" }}
+          
+          <FormInput
+            label="Division"
+            name="division"
+            value={values.division}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            error={touched.division ? errors.division : ""}
+            placeholder="e.g., A"
             required
           />
-          <div style={{ textAlign: "right" }}>
-            <button type="button" onClick={onClose} style={{
-              padding: "6px 12px",
-              marginRight: "10px",
-              backgroundColor: "#f0f0f0",
-              border: "1px solid #ccc",
-              borderRadius: "4px",
-              cursor: "pointer"
-            }}>Cancel</button>
-            <button type="submit" style={{
-              padding: "6px 12px",
-              backgroundColor: "#000",
-              color: "#fff",
-              border: "none",
-              borderRadius: "4px",
-              cursor: "pointer"
-            }}>Create</button>
+          
+          <div className="modal-actions">
+            <button 
+              type="button" 
+              onClick={handleClose} 
+              className="btn btn-secondary"
+              disabled={loading}
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              className="btn btn-primary"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <div className="loading-spinner"></div>
+                  Creating...
+                </>
+              ) : (
+                "Create Class"
+              )}
+            </button>
           </div>
         </form>
       </div>
