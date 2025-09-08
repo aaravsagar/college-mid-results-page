@@ -3,16 +3,32 @@ import { collection, getDocs, addDoc } from "firebase/firestore";
 import { db } from "../firebaseConfig";
 import { useNavigate } from "react-router-dom";
 import CreateClassDialog from "../components/CreateClassDialog";
+import LoadingSpinner from "../components/LoadingSpinner";
+import ErrorMessage from "../components/ErrorMessage";
+import SuccessMessage from "../components/SuccessMessage";
+import "../styles/global.css";
 
 function Dashboard() {
   const [classes, setClasses] = useState([]);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const navigate = useNavigate();
 
   // Fetch all classes from Firestore
   const fetchClasses = async () => {
-    const snapshot = await getDocs(collection(db, "classes"));
-    setClasses(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    try {
+      setLoading(true);
+      setError("");
+      const snapshot = await getDocs(collection(db, "classes"));
+      setClasses(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    } catch (err) {
+      console.error("Error fetching classes:", err);
+      setError("Failed to load classes. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -21,72 +37,79 @@ function Dashboard() {
 
   // Add new class
   const addClass = async (data) => {
-    await addDoc(collection(db, "classes"), data);
-    setCreateDialogOpen(false);
-    fetchClasses();
+    try {
+      setError("");
+      await addDoc(collection(db, "classes"), data);
+      setCreateDialogOpen(false);
+      setSuccess("Class created successfully!");
+      setTimeout(() => setSuccess(""), 3000);
+      fetchClasses();
+    } catch (err) {
+      console.error("Error creating class:", err);
+      setError("Failed to create class. Please try again.");
+    }
   };
 
+  if (loading) {
+    return <LoadingSpinner text="Loading classes..." />;
+  }
+
   return (
-    <div style={{ maxWidth: "900px", margin: "20px auto", fontFamily: "Arial, sans-serif" }}>
-      <h1 style={{ borderBottom: "2px solid #ccc", paddingBottom: "8px" }}>Admin Dashboard</h1>
-
-      <button
-        onClick={() => setCreateDialogOpen(true)}
-        style={{
-          padding: "8px 16px",
-          marginBottom: "20px",
-          cursor: "pointer",
-          borderRadius: "4px",
-          border: "1px solid #ccc",
-          backgroundColor: "#f5f5f5"
-        }}
-      >
-        Create Class
-      </button>
-
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-        {classes.length === 0 && <div>No classes added yet.</div>}
-        {classes.map(cls => (
-          <div
-            key={cls.id}
-            style={{
-              padding: "20px",
-              border: "1px solid #ccc",
-              borderRadius: "4px",
-              minWidth: "150px",
-              textAlign: "center",
-              backgroundColor: "#f9f9f9",
-              boxShadow: "1px 1px 4px rgba(0,0,0,0.1)"
-            }}
-          >
-            <div style={{ fontWeight: "bold", marginBottom: "5px" }}>{cls.className}</div>
-            <div style={{ fontSize: "14px", color: "#555" }}>
-              {cls.branch}-{cls.semester}-{cls.division}
-            </div>
-            <div style={{ marginTop: "10px" }}>
-              <button
-                onClick={() => navigate(`/class/${cls.id}`)}
-                style={{ padding: "6px 10px", marginRight: "5px", cursor: "pointer", borderRadius: "3px", border: "1px solid #ccc" }}
-              >
-                Details
-              </button>
-              <button
-                onClick={() => navigate(`/class/${cls.id}/enter-marks`)}
-                style={{ padding: "6px 10px", cursor: "pointer", borderRadius: "3px", border: "1px solid #ccc" }}
-              >
-                Enter Marks
-              </button>
-            </div>
-          </div>
-        ))}
+    <>
+      <div className="page-header">
+        <div className="container">
+          <h1>Admin Dashboard</h1>
+        </div>
       </div>
+      
+      <div className="container">
+        <ErrorMessage message={error} onRetry={fetchClasses} />
+        <SuccessMessage message={success} />
 
-      <CreateClassDialog
-        open={createDialogOpen}
-        onClose={() => setCreateDialogOpen(false)}
-        onCreate={addClass}
-      />
-    </div>
+        <div className="card">
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <h2 className="mb-0">Classes</h2>
+            <button
+              onClick={() => setCreateDialogOpen(true)}
+              className="btn btn-primary"
+            >
+              Create Class
+            </button>
+          </div>
+
+          {classes.length === 0 ? (
+            <div className="text-center" style={{ padding: "40px 0", color: "#666" }}>
+              <p>No classes created yet.</p>
+              <p>Click "Create Class" to get started.</p>
+            </div>
+          ) : (
+            <div className="grid">
+              {classes.map(cls => (
+                <div key={cls.id} className="class-card">
+                  <h3>{cls.className}</h3>
+                  <p>{cls.branch} - Semester {cls.semester}</p>
+                  <p>Division: {cls.division}</p>
+                  <div className="d-flex gap-1 mt-2">
+                    <button
+                      onClick={() => navigate(`/class/${cls.id}`)}
+                      className="btn btn-primary btn-small"
+                    >
+                      Manage
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <CreateClassDialog
+          open={createDialogOpen}
+          onClose={() => setCreateDialogOpen(false)}
+          onCreate={addClass}
+        />
+      </div>
+    </>
   );
 }
 
