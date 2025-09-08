@@ -1,3 +1,4 @@
+// src/pages/Dashboard.jsx
 import { useState, useEffect } from "react";
 import { collection, getDocs, addDoc } from "firebase/firestore";
 import { db } from "../firebaseConfig";
@@ -110,10 +111,6 @@ function Dashboard() {
         />
       </div>
     </>
-<<<<<<< HEAD
-=======
-          </div>
->>>>>>> 196fe26d2ab28d908c9ea2e32d6c07a0090c325a
   );
 }
 
