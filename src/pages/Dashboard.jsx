@@ -1,14 +1,12 @@
 import { useState, useEffect } from "react";
-import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc } from "firebase/firestore";
+import { collection, getDocs, addDoc } from "firebase/firestore";
 import { db } from "../firebaseConfig";
-import CreateClassDialog from "../components/CreateClassDialog";
-import EditClassDialog from "../components/EditClassDialog";
 import { useNavigate } from "react-router-dom";
+import CreateClassDialog from "../components/CreateClassDialog";
 
 function Dashboard() {
   const [classes, setClasses] = useState([]);
-  const [createOpen, setCreateOpen] = useState(false);
-  const [editClassData, setEditClassData] = useState(null);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const navigate = useNavigate();
 
   // Fetch all classes from Firestore
@@ -21,103 +19,73 @@ function Dashboard() {
     fetchClasses();
   }, []);
 
-  // Add a new class
-  const addClass = async (classData) => {
-    await addDoc(collection(db, "classes"), classData);
-    setCreateOpen(false);
+  // Add new class
+  const addClass = async (data) => {
+    await addDoc(collection(db, "classes"), data);
+    setCreateDialogOpen(false);
     fetchClasses();
-  };
-
-  // Update class
-  const updateClass = async (id, classData) => {
-    await updateDoc(doc(db, "classes", id), classData);
-    setEditClassData(null);
-    fetchClasses();
-  };
-
-  // Delete class
-  const deleteClass = async (id) => {
-    if (window.confirm("Are you sure you want to delete this class?")) {
-      await deleteDoc(doc(db, "classes", id));
-      fetchClasses();
-    }
   };
 
   return (
-    <div style={{ maxWidth: "900px", margin: "20px auto", fontFamily: "Arial, sans-serif", color: "#333" }}>
+    <div style={{ maxWidth: "900px", margin: "20px auto", fontFamily: "Arial, sans-serif" }}>
       <h1 style={{ borderBottom: "2px solid #ccc", paddingBottom: "8px" }}>Admin Dashboard</h1>
 
       <button
-        onClick={() => setCreateOpen(true)}
+        onClick={() => setCreateDialogOpen(true)}
         style={{
           padding: "8px 16px",
-          marginTop: "10px",
           marginBottom: "20px",
-          borderRadius: "4px",
           cursor: "pointer",
+          borderRadius: "4px",
           border: "1px solid #ccc",
-          backgroundColor: "#f0f0f0"
+          backgroundColor: "#f5f5f5"
         }}
       >
         Create Class
       </button>
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-        {classes.length === 0 && <p>No classes found.</p>}
-        {classes.map(c => (
-          <div key={c.id} style={{
-            border: "1px solid #ccc",
-            padding: "10px",
-            cursor: "pointer",
-            borderRadius: "4px",
-            minWidth: "150px",
-            backgroundColor: "#fff",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.1)"
-          }}>
-            <div onClick={() => navigate(`/class/${c.id}`)} style={{ fontWeight: "bold", marginBottom: "5px" }}>
-              {c.className} ({c.branch}-{c.semester}-{c.division})
+        {classes.length === 0 && <div>No classes added yet.</div>}
+        {classes.map(cls => (
+          <div
+            key={cls.id}
+            style={{
+              padding: "20px",
+              border: "1px solid #ccc",
+              borderRadius: "4px",
+              minWidth: "150px",
+              textAlign: "center",
+              backgroundColor: "#f9f9f9",
+              boxShadow: "1px 1px 4px rgba(0,0,0,0.1)"
+            }}
+          >
+            <div style={{ fontWeight: "bold", marginBottom: "5px" }}>{cls.className}</div>
+            <div style={{ fontSize: "14px", color: "#555" }}>
+              {cls.branch}-{cls.semester}-{cls.division}
             </div>
-            <div>
+            <div style={{ marginTop: "10px" }}>
               <button
-                onClick={() => setEditClassData(c)}
-                style={{
-                  padding: "4px 8px",
-                  marginRight: "5px",
-                  cursor: "pointer",
-                  borderRadius: "4px",
-                  border: "1px solid #ccc",
-                  backgroundColor: "#f0f0f0"
-                }}
+                onClick={() => navigate(`/class/${cls.id}`)}
+                style={{ padding: "6px 10px", marginRight: "5px", cursor: "pointer", borderRadius: "3px", border: "1px solid #ccc" }}
               >
-                Edit
+                Details
               </button>
               <button
-                onClick={() => deleteClass(c.id)}
-                style={{
-                  padding: "4px 8px",
-                  cursor: "pointer",
-                  borderRadius: "4px",
-                  border: "1px solid #ccc",
-                  backgroundColor: "#f0f0f0"
-                }}
+                onClick={() => navigate(`/class/${cls.id}/enter-marks`)}
+                style={{ padding: "6px 10px", cursor: "pointer", borderRadius: "3px", border: "1px solid #ccc" }}
               >
-                Delete
+                Enter Marks
               </button>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Dialogs */}
-      <CreateClassDialog open={createOpen} onClose={() => setCreateOpen(false)} onCreate={addClass} />
-      {editClassData && (
-        <EditClassDialog
-          open={true}
-          onClose={() => setEditClassData(null)}
-          classData={editClassData}
-          onUpdate={updateClass}
-        />
-      )}
+      <CreateClassDialog
+        open={createDialogOpen}
+        onClose={() => setCreateDialogOpen(false)}
+        onCreate={addClass}
+      />
     </div>
   );
 }
