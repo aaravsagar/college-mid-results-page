@@ -1,585 +1,645 @@
-/* Global Styles */
-* {
-  box-sizing: border-box;
-}
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
+import { db } from "../firebaseConfig";
+import { useAuth } from "../contexts/AuthContext";
+import LoadingSpinner from "../components/LoadingSpinner";
+import ErrorMessage from "../components/ErrorMessage";
+import SuccessMessage from "../components/SuccessMessage";
 
-body {
-  margin: 0;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #f8f9fa;
-  color: #333;
-  line-height: 1.6;
-}
-
-/* Loading Spinner */
-.loading-spinner {
-  display: inline-block;
-  width: 20px;
-  height: 20px;
-  border: 3px solid #e3f2fd;
-  border-radius: 50%;
-  border-top-color: #1976d2;
-  animation: spin 1s ease-in-out infinite;
-}
-
-.loading-spinner.large {
-  width: 40px;
-  height: 40px;
-  border-width: 4px;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-/* Page Loading */
-.page-loading {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 50vh;
-  flex-direction: column;
-  gap: 16px;
-}
-
-/* Error Message */
-.error-message {
-  background-color: #ffebee;
-  color: #c62828;
-  padding: 12px 16px;
-  border-radius: 4px;
-  border-left: 4px solid #c62828;
-  margin: 16px 0;
-  animation: slideIn 0.3s ease-out;
-}
-
-/* Success Message */
-.success-message {
-  background-color: #e8f5e8;
-  color: #2e7d32;
-  padding: 12px 16px;
-  border-radius: 4px;
-  border-left: 4px solid #4caf50;
-  margin: 16px 0;
-  animation: slideIn 0.3s ease-out;
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Container */
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
-}
-
-@media (max-width: 768px) {
-  .container {
-    padding: 16px;
-  }
-}
-
-/* Page Header */
-.page-header {
-  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
-  color: white;
-  padding: 24px 0;
-  margin-bottom: 32px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.page-header h1 {
-  margin: 0;
-  font-size: 2rem;
-  font-weight: 600;
+import AddStudentDialog from "../components/AddStudentDialog";
+import EditStudentDialog from "../components/EditStudentDialog";
+import AddSubjectDialog from "../components/AddSubjectDialog";
+import EditSubjectDialog from "../components/EditSubjectDialog";
+import AddTestDialog from "../components/AddTestDialog";
+  padding-top: 20px;
   text-align: center;
 }
 
-@media (max-width: 768px) {
-  .page-header h1 {
-    font-size: 1.5rem;
-  }
-}
-
-/* Cards */
-.card {
-  background: white;
+.demo-accounts {
+  background: #f8f9fa;
+  padding: 16px;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  padding: 24px;
-  margin-bottom: 24px;
-  transition: box-shadow 0.3s ease;
+  font-size: 0.85rem;
 }
 
-.card:hover {
-  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-}
-
-@media (max-width: 768px) {
-  .card {
-    padding: 16px;
-    margin-bottom: 16px;
-  }
-}
-
-/* Buttons */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 4px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-decoration: none;
-  min-height: 40px;
-}
-
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-primary {
-  background-color: #1976d2;
-  color: white;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background-color: #1565c0;
-  transform: translateY(-1px);
-}
-
-.btn-success {
-  background-color: #4caf50;
-  color: white;
-}
-
-.btn-success:hover:not(:disabled) {
-  background-color: #388e3c;
-  transform: translateY(-1px);
-}
-
-.btn-secondary {
-  background-color: #f5f5f5;
-  color: #333;
-  border: 1px solid #ddd;
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background-color: #e0e0e0;
-}
-
-.btn-danger {
-  background-color: #f44336;
-  color: white;
-}
-
-.btn-danger:hover:not(:disabled) {
-  background-color: #d32f2f;
-}
-
-.btn-small {
-  padding: 6px 12px;
-  font-size: 12px;
-  min-height: 32px;
-}
-
-@media (max-width: 768px) {
-  .btn {
-    padding: 12px 16px;
-    font-size: 16px;
-    min-height: 44px;
-  }
-  
-  .btn-small {
-    padding: 8px 12px;
-    font-size: 14px;
-    min-height: 36px;
-  }
-}
-
-/* Form Elements */
-.form-group {
-  margin-bottom: 16px;
-}
-
-.form-label {
-  display: block;
-  margin-bottom: 6px;
-  font-weight: 500;
-  color: #555;
-}
-
-.form-input {
-  width: 100%;
-  padding: 10px 12px;
-  border: 2px solid #e0e0e0;
-  border-radius: 4px;
-  font-size: 14px;
-  transition: border-color 0.2s ease;
-}
-
-.form-input:focus {
-  outline: none;
-  border-color: #1976d2;
-}
-
-.form-input.error {
-  border-color: #f44336;
-}
-
-.form-error {
-  color: #f44336;
-  font-size: 12px;
-  margin-top: 4px;
-}
-
-@media (max-width: 768px) {
-  .form-input {
-    padding: 12px;
-    font-size: 16px;
-  }
-}
-
-/* Tables */
-.table-container {
-  overflow-x: auto;
-  margin: 16px 0;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  background: white;
-  min-width: 600px;
-}
-
-.table th,
-.table td {
-  padding: 12px;
-  text-align: left;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.table th {
-  background-color: #f8f9fa;
-  font-weight: 600;
-  color: #555;
-  position: sticky;
-  top: 0;
-  z-index: 1;
-}
-
-.table tr:hover {
-  background-color: #f8f9fa;
-}
-
-.table .text-center {
-  text-align: center;
-}
-
-.table .text-danger {
-  color: #f44336;
-  font-weight: 600;
-}
-
-@media (max-width: 768px) {
-  .table th,
-  .table td {
-    padding: 8px;
-    font-size: 14px;
-  }
-}
-
-/* Tabs */
-.tabs {
-  display: flex;
-  border-bottom: 2px solid #e0e0e0;
-  margin-bottom: 24px;
-  overflow-x: auto;
-}
-
-.tab {
-  padding: 12px 24px;
-  border: none;
-  background: none;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  color: #666;
-  border-bottom: 3px solid transparent;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.tab.active {
-  color: #1976d2;
-  border-bottom-color: #1976d2;
-}
-
-.tab:hover {
-  color: #1976d2;
-  background-color: #f8f9fa;
-}
-
-@media (max-width: 768px) {
-  .tab {
-    padding: 16px 20px;
-    font-size: 16px;
-  }
-}
-
-/* Grid */
-.grid {
-  display: grid;
-  gap: 16px;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-}
-
-@media (max-width: 768px) {
-  .grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Class/Test Cards */
-.class-card,
-.test-card {
-  background: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 20px;
-  text-align: center;
-  transition: all 0.3s ease;
-  position: relative;
-  cursor: pointer;
-}
-
-.class-card:hover,
-.test-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-  border-color: #1976d2;
-}
-
-.class-card h3,
-.test-card h3 {
+.demo-accounts h4 {
   margin: 0 0 8px 0;
-  color: #1976d2;
-  font-size: 1.1rem;
-}
-
-.class-card p,
-.test-card p {
-  margin: 4px 0;
-  color: #666;
+  color: #333;
   font-size: 0.9rem;
 }
 
-.card-actions {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  display: flex;
-  gap: 4px;
-  opacity: 0;
-  transition: opacity 0.2s ease;
+.demo-accounts p {
+  margin: 4px 0;
+  color: #555;
 }
 
-.class-card:hover .card-actions,
-.test-card:hover .card-actions {
-  opacity: 1;
-}
-
-/* Modal/Dialog */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-  animation: fadeIn 0.2s ease-out;
-}
-
-.modal {
+/* Header Styles */
+.app-header {
   background: white;
-  border-radius: 8px;
-  padding: 24px;
-  width: 90%;
-  max-width: 500px;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-  animation: slideUp 0.3s ease-out;
+  border-bottom: 1px solid #e0e0e0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 0;
 }
 
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 32px;
 }
 
-.modal h3 {
-  margin: 0 0 20px 0;
+.header-title {
+  margin: 0;
   color: #1976d2;
   font-size: 1.3rem;
-  border-bottom: 2px solid #e0e0e0;
-  padding-bottom: 8px;
+  font-weight: 600;
 }
 
-.modal-actions {
+.header-nav {
   display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 24px;
-  padding-top: 16px;
-  border-top: 1px solid #e0e0e0;
+  gap: 8px;
 }
 
-@media (max-width: 768px) {
-  .modal {
-    width: 95%;
-    padding: 20px;
-  }
-  
-  .modal-actions {
-    flex-direction: column-reverse;
-  }
-  
-  .modal-actions .btn {
-    width: 100%;
-  }
+.nav-link {
+  background: none;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+  transition: all 0.2s ease;
 }
 
-/* Status Badge */
-.status-badge {
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 12px;
+.nav-link:hover {
+  background-color: #f5f5f5;
+  color: #1976d2;
+}
+
+.nav-link.active {
+  background-color: #e3f2fd;
+  color: #1976d2;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.user-name {
+  font-weight: 500;
+  color: #333;
+  font-size: 0.9rem;
+}
+
+.user-role {
+  font-size: 0.75rem;
+  padding: 2px 6px;
+  border-radius: 8px;
   font-weight: 500;
   text-transform: uppercase;
 }
 
-.status-badge.published {
+.user-role.admin {
   background-color: #e8f5e8;
   color: #2e7d32;
 }
 
-.status-badge.draft {
-  background-color: #fff3e0;
-  color: #f57c00;
+.user-role.teacher {
+  background-color: #e3f2fd;
+  color: #1976d2;
 }
 
-/* Result Display */
-.result-header {
-  background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
-  color: white;
-  padding: 20px;
-  border-radius: 8px 8px 0 0;
-  text-align: center;
+/* Checkbox Group */
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 12px;
 }
 
-.result-header.failed {
-  background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
-}
-
-.result-summary {
-  background: white;
-  padding: 20px;
-  border-radius: 0 0 8px 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-/* CAPTCHA */
-.captcha-container {
+.checkbox-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin: 16px 0;
+  gap: 8px;
+  cursor: pointer;
+  padding: 4px 0;
 }
 
-.captcha-text {
-  background: #f5f5f5;
-  padding: 8px 16px;
-  border: 2px solid #ddd;
-  border-radius: 4px;
-  font-family: 'Courier New', monospace;
-  font-size: 18px;
-  font-weight: bold;
-  letter-spacing: 2px;
+.checkbox-item input[type="checkbox"] {
+  margin: 0;
+}
+
+.checkbox-item span {
+  font-size: 0.9rem;
   color: #333;
-  user-select: none;
 }
 
 @media (max-width: 768px) {
-  .captcha-container {
+  .login-card {
+    padding: 24px;
+  }
+  
+  .header-content {
     flex-direction: column;
+    gap: 16px;
     align-items: stretch;
+  }
+  
+  .header-left {
+    flex-direction: column;
+    gap: 16px;
+    align-items: center;
+  }
+  
+  .header-nav {
+    justify-content: center;
+  }
+  
+  .header-right {
+    justify-content: center;
+  }
+  
+  .user-info {
+    align-items: center;
   }
 }
 
-/* Utility Classes */
-.text-center { text-align: center; }
-.text-right { text-align: right; }
-.text-danger { color: #f44336; }
-.text-success { color: #4caf50; }
-.text-primary { color: #1976d2; }
+import EditTestDialog from "../components/EditTestDialog";
 
-.mb-0 { margin-bottom: 0; }
-.mb-1 { margin-bottom: 8px; }
-.mb-2 { margin-bottom: 16px; }
-.mb-3 { margin-bottom: 24px; }
+function ClassDetails() {
+  const { classId } = useParams();
+  const navigate = useNavigate();
 
-.mt-0 { margin-top: 0; }
-.mt-1 { margin-top: 8px; }
-.mt-2 { margin-top: 16px; }
-.mt-3 { margin-top: 24px; }
+  const [classInfo, setClassInfo] = useState(null);
+  const [students, setStudents] = useState([]);
+  const [subjects, setSubjects] = useState([]);
+  const [tests, setTests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-.d-flex { display: flex; }
-.align-items-center { align-items: center; }
-.justify-content-center { justify-content: center; }
-.justify-content-between { justify-content: space-between; }
-.gap-1 { gap: 8px; }
-.gap-2 { gap: 16px; }
+  const [activeTab, setActiveTab] = useState("students");
 
-.w-100 { width: 100%; }
+  // Dialog states
+  const [addStudentOpen, setAddStudentOpen] = useState(false);
+  const [editStudentData, setEditStudentData] = useState(null);
+  const [addSubjectOpen, setAddSubjectOpen] = useState(false);
+  const [editSubjectData, setEditSubjectData] = useState(null);
+  const [addTestOpen, setAddTestOpen] = useState(false);
+  const [editTestData, setEditTestData] = useState(null);
 
-/* Responsive helpers */
-@media (max-width: 768px) {
-  .hide-mobile { display: none; }
+  // Fetch class info
+  const fetchClass = async () => {
+    try {
+      const snapshot = await getDocs(collection(db, "classes"));
+      const docSnap = snapshot.docs.find(doc => doc.id === classId);
+      if (docSnap) setClassInfo({ id: docSnap.id, ...docSnap.data() });
+    } catch (err) {
+      console.error("Error fetching class:", err);
+      setError("Failed to load class information.");
+    }
+  };
+
+  // Fetch students, subjects, tests
+  const fetchStudents = async () => {
+    try {
+      const snapshot = await getDocs(collection(db, "classes", classId, "students"));
+      setStudents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    } catch (err) {
+      console.error("Error fetching students:", err);
+      setError("Failed to load students.");
+    }
+  };
+
+  const fetchSubjects = async () => {
+    try {
+      const snapshot = await getDocs(collection(db, "classes", classId, "subjects"));
+      setSubjects(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    } catch (err) {
+      console.error("Error fetching subjects:", err);
+      setError("Failed to load subjects.");
+    }
+  };
+
+  const fetchTests = async () => {
+    try {
+      const snapshot = await getDocs(collection(db, "classes", classId, "tests"));
+      setTests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    } catch (err) {
+      console.error("Error fetching tests:", err);
+      setError("Failed to load tests.");
+    }
+  };
+
+  const fetchAllData = async () => {
+    setLoading(true);
+    setError("");
+    await Promise.all([fetchClass(), fetchStudents(), fetchSubjects(), fetchTests()]);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchAllData();
+  }, []);
+
+  // Students CRUD
+  const addStudent = async (data) => {
+    try {
+      await addDoc(collection(db, "classes", classId, "students"), data);
+      setAddStudentOpen(false);
+      setSuccess("Student added successfully!");
+      setTimeout(() => setSuccess(""), 3000);
+      fetchStudents();
+    } catch (err) {
+      console.error("Error adding student:", err);
+      setError("Failed to add student.");
+    }
+  };
+
+  const updateStudent = async (id, data) => {
+    try {
+      await updateDoc(doc(db, "classes", classId, "students", id), data);
+      setEditStudentData(null);
+      setSuccess("Student updated successfully!");
+      setTimeout(() => setSuccess(""), 3000);
+      fetchStudents();
+    } catch (err) {
+      console.error("Error updating student:", err);
+      setError("Failed to update student.");
+    }
+  };
+
+  const deleteStudent = async (id) => {
+    if (window.confirm("Delete this student?")) {
+      try {
+        await deleteDoc(doc(db, "classes", classId, "students", id));
+        setSuccess("Student deleted successfully!");
+        setTimeout(() => setSuccess(""), 3000);
+        fetchStudents();
+      } catch (err) {
+        console.error("Error deleting student:", err);
+        setError("Failed to delete student.");
+      }
+    }
+  };
+
+  // Subjects CRUD
+  const addSubject = async (data) => {
+    try {
+      await addDoc(collection(db, "classes", classId, "subjects"), data);
+      setAddSubjectOpen(false);
+      setSuccess("Subject added successfully!");
+      setTimeout(() => setSuccess(""), 3000);
+      fetchSubjects();
+    } catch (err) {
+      console.error("Error adding subject:", err);
+      setError("Failed to add subject.");
+    }
+  };
+
+  const updateSubject = async (id, data) => {
+    try {
+      await updateDoc(doc(db, "classes", classId, "subjects", id), data);
+      setEditSubjectData(null);
+      setSuccess("Subject updated successfully!");
+      setTimeout(() => setSuccess(""), 3000);
+      fetchSubjects();
+    } catch (err) {
+      console.error("Error updating subject:", err);
+      setError("Failed to update subject.");
+    }
+  };
+
+  const deleteSubject = async (id) => {
+    if (window.confirm("Delete this subject?")) {
+      try {
+        await deleteDoc(doc(db, "classes", classId, "subjects", id));
+        setSuccess("Subject deleted successfully!");
+        setTimeout(() => setSuccess(""), 3000);
+        fetchSubjects();
+      } catch (err) {
+        console.error("Error deleting subject:", err);
+        setError("Failed to delete subject.");
+      }
+    }
+  };
+
+  // Tests CRUD
+  const addTest = async (data) => {
+    try {
+      await addDoc(collection(db, "classes", classId, "tests"), data);
+      setAddTestOpen(false);
+      setSuccess("Test created successfully!");
+      setTimeout(() => setSuccess(""), 3000);
+      fetchTests();
+    } catch (err) {
+      console.error("Error creating test:", err);
+      setError("Failed to create test.");
+    }
+  };
+
+  if (loading) {
+    return <LoadingSpinner text="Loading class details..." />;
+  }
+
+  if (!classInfo) {
+    return (
+      <div className="container">
+        <ErrorMessage message="Class not found" />
+        <button onClick={() => navigate("/")} className="btn btn-primary">
+          Back to Dashboard
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="page-header">
+        <div className="container">
+          <h1>
+            {classInfo.className}
+          </h1>
+          <p style={{ margin: 0, opacity: 0.9 }}>
+            {classInfo.branch} - Semester {classInfo.semester} - Division {classInfo.division}
+          </p>
+        </div>
+      </div>
+      
+      <div className="container">
+        <ErrorMessage message={error} onRetry={fetchAllData} />
+        <SuccessMessage message={success} />
+
+        {/* Navigation */}
+        <div className="d-flex justify-content-between align-items-center mb-3">
+          <button 
+            onClick={() => navigate("/")} 
+            className="btn btn-secondary"
+          >
+            ← Back to Dashboard
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="tabs">
+          <button
+            onClick={() => setActiveTab("students")}
+            className={`tab ${activeTab === "students" ? "active" : ""}`}
+          >
+            Students ({students.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("subjects")}
+            className={`tab ${activeTab === "subjects" ? "active" : ""}`}
+          >
+            Subjects ({subjects.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("tests")}
+            className={`tab ${activeTab === "tests" ? "active" : ""}`}
+          >
+            Tests ({tests.length})
+          </button>
+        </div>
+
+        {/* Students Tab */}
+        {activeTab === "students" && (
+          <div className="card">
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <h3 className="mb-0">Students</h3>
+              <button
+                onClick={() => setAddStudentOpen(true)}
+                className="btn btn-primary"
+              >
+                Add Student
+              </button>
+            </div>
+            
+            {students.length === 0 ? (
+              <div className="text-center" style={{ padding: "40px 0", color: "#666" }}>
+                <p>No students added yet.</p>
+                <p>Click "Add Student" to get started.</p>
+              </div>
+            ) : (
+              <div className="table-container">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Enrollment Number</th>
+                      <th className="hide-mobile">Phone Number</th>
+                      <th className="text-center">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {students.map(s => (
+                      <tr key={s.id}>
+                        <td>{s.name}</td>
+                        <td>{s.enrollmentNumber}</td>
+                        <td className="hide-mobile">{s.phoneNumber}</td>
+                        <td className="text-center">
+                          <div className="d-flex gap-1 justify-content-center">
+                            <button 
+                              onClick={() => setEditStudentData(s)} 
+                              className="btn btn-secondary btn-small"
+                            >
+                              Edit
+                            </button>
+                            <button 
+                              onClick={() => deleteStudent(s.id)}
+                              className="btn btn-danger btn-small"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Subjects Tab */}
+        {activeTab === "subjects" && (
+          <div className="card">
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <h3 className="mb-0">Subjects</h3>
+              <button
+                onClick={() => setAddSubjectOpen(true)}
+                className="btn btn-primary"
+              >
+                Add Subject
+              </button>
+            </div>
+            
+            {subjects.length === 0 ? (
+              <div className="text-center" style={{ padding: "40px 0", color: "#666" }}>
+                <p>No subjects added yet.</p>
+                <p>Click "Add Subject" to get started.</p>
+              </div>
+            ) : (
+              <div className="table-container">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Subject Name</th>
+                      <th>Subject Code</th>
+                      <th className="text-center">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {subjects.map(sub => (
+                      <tr key={sub.id}>
+                        <td>{sub.name}</td>
+                        <td>{sub.code}</td>
+                        <td className="text-center">
+                          <div className="d-flex gap-1 justify-content-center">
+                            <button 
+                              onClick={() => setEditSubjectData(sub)} 
+                              className="btn btn-secondary btn-small"
+                            >
+                              Edit
+                            </button>
+                            <button 
+                              onClick={() => deleteSubject(sub.id)}
+                              className="btn btn-danger btn-small"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tests Tab */}
+        {activeTab === "tests" && (
+          <div className="card">
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <h3 className="mb-0">Tests</h3>
+              <button
+                onClick={() => setAddTestOpen(true)}
+                className="btn btn-primary"
+              >
+                Create Test
+              </button>
+            </div>
+            
+            {tests.length === 0 ? (
+              <div className="text-center" style={{ padding: "40px 0", color: "#666" }}>
+                <p>No tests created yet.</p>
+                <p>Click "Create Test" to get started.</p>
+              </div>
+            ) : (
+              <div className="grid">
+                {tests.map(test => (
+                  <div key={test.id} className="test-card">
+                    <div className="card-actions">
+                      <button 
+                        onClick={() => setEditTestData(test)} 
+                        className="btn btn-secondary btn-small"
+                      >
+                        Edit
+                      </button>
+                      <button 
+                        onClick={async () => {
+                          if (window.confirm("Delete this test?")) {
+                            try {
+                              await deleteDoc(doc(db, "classes", classId, "tests", test.id));
+                              setSuccess("Test deleted successfully!");
+                              setTimeout(() => setSuccess(""), 3000);
+                              fetchTests();
+                            } catch (err) {
+                              console.error("Error deleting test:", err);
+                              setError("Failed to delete test.");
+                            }
+                          }
+                        }}
+                        className="btn btn-danger btn-small"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                    
+                    <div onClick={() => navigate(`/class/${classId}/enter-marks/${test.id}`)}>
+                      <h3>{test.name}</h3>
+                      <p>Total Marks: {test.totalMarks || 100}</p>
+                      <div className={`status-badge ${test.published ? 'published' : 'draft'}`}>
+                        {test.published ? "Published" : "Draft"}
+                      </div>
+                      <div className="mt-2">
+                        <button className="btn btn-primary btn-small">
+                          Enter Marks
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Dialogs */}
+        <AddStudentDialog open={addStudentOpen} onClose={() => setAddStudentOpen(false)} onCreate={addStudent} />
+        {editStudentData && (
+          <EditStudentDialog open={true} onClose={() => setEditStudentData(null)} studentData={editStudentData} onUpdate={updateStudent} />
+        )}
+
+        <AddSubjectDialog open={addSubjectOpen} onClose={() => setAddSubjectOpen(false)} onCreate={addSubject} />
+        {editSubjectData && (
+          <EditSubjectDialog open={true} onClose={() => setEditSubjectData(null)} subjectData={editSubjectData} onUpdate={updateSubject} />
+        )}
+
+        <AddTestDialog open={addTestOpen} onClose={() => setAddTestOpen(false)} onCreate={addTest} />
+        {editTestData && (
+          <EditTestDialog open={true} onClose={() => setEditTestData(null)} testData={editTestData} onUpdate={async (data) => {
+            try {
+              await updateDoc(doc(db, "classes", classId, "tests", editTestData.id), data);
+              setEditTestData(null);
+              setSuccess("Test updated successfully!");
+              setTimeout(() => setSuccess(""), 3000);
+              fetchTests();
+            } catch (err) {
+              console.error("Error updating test:", err);
+              setError("Failed to update test.");
+            }
+          }} />
+        )}
+      </div>
+    </>
+  );
 }
 
-@media (min-width: 769px) {
-  .hide-desktop { display: none; }
-}
+export default ClassDetails;
