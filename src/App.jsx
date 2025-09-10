@@ -1,4 +1,9 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "./contexts/AuthContext";
+import ProtectedRoute from "./components/ProtectedRoute";
+import Header from "./components/Header";
+import Login from "./pages/Login";
+import UserManagement from "./pages/UserManagement";
 import Dashboard from "./pages/Dashboard";
 import ClassDetails from "./pages/ClassDetails";
 import EnterMarks from "./pages/EnterMarks";
@@ -7,18 +12,56 @@ import PublicResultView from "./pages/PublicResultView";
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        {/* Admin Routes */}
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/class/:classId" element={<ClassDetails />} />
-        <Route path="/class/:classId/enter-marks/:testId" element={<EnterMarks />} />
+    <AuthProvider>
+      <Router>
+        <Header />
+        <Routes>
+          {/* Authentication */}
+          <Route path="/login" element={<Login />} />
 
-        {/* Public Routes */}
-        <Route path="/results" element={<PublicResultsList />} /> {/* List of published tests */}
-        <Route path="/results/:classId/:testId" element={<PublicResultView />} /> {/* Student view */}
-      </Routes>
-    </Router>
+          {/* Protected Admin Routes */}
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/users"
+            element={
+              <ProtectedRoute requireAdmin={true}>
+                <UserManagement />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/class/:classId"
+            element={
+              <ProtectedRoute>
+                <ClassDetails />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/class/:classId/enter-marks/:testId"
+            element={
+              <ProtectedRoute>
+                <EnterMarks />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Public Routes */}
+          <Route path="/results" element={<PublicResultsList />} />
+          <Route path="/results/:classId/:testId" element={<PublicResultView />} />
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 }
 

@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { collection, getDocs, doc, setDoc, updateDoc, getDoc } from "firebase/firestore";
 import { db } from "../firebaseConfig";
+import { useAuth } from "../contexts/AuthContext";
 import LoadingSpinner from "../components/LoadingSpinner";
 import ErrorMessage from "../components/ErrorMessage";
 import SuccessMessage from "../components/SuccessMessage";
@@ -10,6 +11,7 @@ import SuccessMessage from "../components/SuccessMessage";
 function EnterMarks() {
   const { classId, testId } = useParams();
   const navigate = useNavigate();
+  const { isAdmin, isCC, canAccessSubject, getAccessibleSubjects } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -35,7 +37,15 @@ function EnterMarks() {
         setStudents(studentsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
 
         const subjectsSnap = await getDocs(collection(db, "classes", classId, "subjects"));
-        setSubjects(subjectsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+        const allSubjects = subjectsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        
+        // Filter subjects based on user permissions
+        const accessibleSubjectIds = getAccessibleSubjects(classId);
+        if (accessibleSubjectIds === 'all') {
+          setSubjects(allSubjects);
+        } else {
+          setSubjects(allSubjects.filter(sub => accessibleSubjectIds.includes(sub.id)));
+        }
 
         const testDocSnap = await getDoc(doc(db, "classes", classId, "tests", testId));
         if (testDocSnap.exists()) setTestInfo({ id: testDocSnap.id, ...testDocSnap.data() });
@@ -57,6 +67,11 @@ function EnterMarks() {
   }, [classId, testId]);
 
   const handleMarkChange = (studentId, subjectId, value) => {
+    // Check if user can access this subject
+    if (!canAccessSubject(classId, subjectId)) {
+      return;
+    }
+    
     const numValue = value === "" ? "" : Number(value);
     const maxMarks = subjects.find(s => s.id === subjectId)?.totalMarks || 30;
     
@@ -71,6 +86,15 @@ function EnterMarks() {
   };
 
   const handleSaveMarks = async () => {
+    if (!isAdmin() && !isCC(classId)) {
+      // For regular teachers, check if they have any accessible subjects
+      const accessibleSubjectIds = getAccessibleSubjects(classId);
+      if (accessibleSubjectIds.length === 0) {
+        setError("You don't have permission to save marks.");
+        return;
+      }
+    }
+    
     setSaving(true);
     setError("");
     try {
@@ -98,6 +122,11 @@ function EnterMarks() {
   };
 
   const handlePublish = async () => {
+    if (!isAdmin() && !isCC(classId)) {
+      setError("Only admins and class coordinators can publish tests.");
+      return;
+    }
+    
     if (window.confirm("Are you sure you want to publish this test? Students will be able to view their results.")) {
       setPublishing(true);
       setError("");
@@ -154,21 +183,24 @@ function EnterMarks() {
           <p style={{ margin: 0, opacity: 0.9 }}>
             {classInfo.className} - {classInfo.branch}-{classInfo.semester}-{classInfo.division}
           </p>
-        </div>
-      </div>
-      
-      <div className="container">
-        <ErrorMessage message={error} />
-        <SuccessMessage message={success} />
-        
-        {/* Navigation */}
-        <div className="d-flex justify-content-between align-items-center mb-3">
-          <button 
-            onClick={() => navigate(`/class/${classId}`)} 
-            className="btn btn-secondary"
-          >
-            ← Back to Class
-          </button>
+          {(isAdmin() || isCC(classId)) && (
+            <button 
+              onClick={handlePublish} 
+              className="btn btn-success"
+              disabled={testInfo.published || saving || publishing}
+            >
+              {publishing ? (
+                <>
+                  <div className="loading-spinner"></div>
+                  Publishing...
+                </>
+              ) : testInfo.published ? (
+                "Published"
+              ) : (
+                "Publish Test"
+              )}
+            </button>
+          )}
           
           <div className="d-flex gap-2">
             <button 
@@ -203,6 +235,11 @@ function EnterMarks() {
             </button>
           </div>
         </div>
+      </div>
+
+      <div className="container">
+        {error && <ErrorMessage message={error} />}
+        {success && <SuccessMessage message={success} />}
 
         <div className="card">
           {students.length === 0 || subjects.length === 0 ? (
@@ -253,6 +290,7 @@ function EnterMarks() {
                               fontSize: "14px"
                             }}
                             placeholder="0"
+                            disabled={!canAccessSubject(classId, sub.id)}
                           />
                         </td>
                       ))}

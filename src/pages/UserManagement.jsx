@@ -1,7 +1,9 @@
+// src/pages/UserManagement.jsx
 import { useState, useEffect } from 'react';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { useAuth } from '../contexts/AuthContext';
+import bcrypt from 'bcryptjs';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorMessage from '../components/ErrorMessage';
 import SuccessMessage from '../components/SuccessMessage';
@@ -29,7 +31,7 @@ function UserManagement() {
     try {
       const [usersSnap, classesSnap] = await Promise.all([
         getDocs(collection(db, 'users')),
-        getDocs(collection(db, 'classes'))
+        getDocs(collection(db, 'classes')),
       ]);
 
       setUsers(usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
@@ -45,15 +47,15 @@ function UserManagement() {
   const createUser = async (userData) => {
     try {
       setError('');
-      
+
       // Hash password
       const hashedPassword = await bcrypt.hash(userData.password, 10);
-      
+
       const newUser = {
         ...userData,
         password: hashedPassword,
         assignedClasses: userData.assignedClasses || [],
-        assignedSubjects: userData.assignedSubjects || []
+        assignedSubjects: userData.assignedSubjects || [],
       };
 
       await addDoc(collection(db, 'users'), newUser);
@@ -70,9 +72,9 @@ function UserManagement() {
   const updateUser = async (userId, userData) => {
     try {
       setError('');
-      
+
       const updateData = { ...userData };
-      
+
       // Hash password if it's being updated
       if (userData.password) {
         updateData.password = await bcrypt.hash(userData.password, 10);

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
 import { db } from "../firebaseConfig";
+import { useAuth } from "../contexts/AuthContext";
 import LoadingSpinner from "../components/LoadingSpinner";
 import ErrorMessage from "../components/ErrorMessage";
 import SuccessMessage from "../components/SuccessMessage";
@@ -16,6 +17,7 @@ import EditTestDialog from "../components/EditTestDialog";
 function ClassDetails() {
   const { classId } = useParams();
   const navigate = useNavigate();
+  const { isAdmin, isCC, canAccessSubject, getAccessibleSubjects } = useAuth();
 
   const [classInfo, setClassInfo] = useState(null);
   const [students, setStudents] = useState([]);
@@ -61,7 +63,15 @@ function ClassDetails() {
   const fetchSubjects = async () => {
     try {
       const snapshot = await getDocs(collection(db, "classes", classId, "subjects"));
-      setSubjects(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const allSubjects = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      // Filter subjects based on user permissions
+      const accessibleSubjectIds = getAccessibleSubjects(classId);
+      if (accessibleSubjectIds === 'all') {
+        setSubjects(allSubjects);
+      } else {
+        setSubjects(allSubjects.filter(sub => accessibleSubjectIds.includes(sub.id)));
+      }
     } catch (err) {
       console.error("Error fetching subjects:", err);
       setError("Failed to load subjects.");
@@ -91,6 +101,11 @@ function ClassDetails() {
 
   // Students CRUD
   const addStudent = async (data) => {
+    if (!isAdmin() && !isCC(classId)) {
+      setError("You don't have permission to add students.");
+      return;
+    }
+    
     try {
       await addDoc(collection(db, "classes", classId, "students"), data);
       setAddStudentOpen(false);
@@ -104,6 +119,11 @@ function ClassDetails() {
   };
 
   const updateStudent = async (id, data) => {
+    if (!isAdmin() && !isCC(classId)) {
+      setError("You don't have permission to update students.");
+      return;
+    }
+    
     try {
       await updateDoc(doc(db, "classes", classId, "students", id), data);
       setEditStudentData(null);
@@ -117,6 +137,11 @@ function ClassDetails() {
   };
 
   const deleteStudent = async (id) => {
+    if (!isAdmin() && !isCC(classId)) {
+      setError("You don't have permission to delete students.");
+      return;
+    }
+    
     if (window.confirm("Delete this student?")) {
       try {
         await deleteDoc(doc(db, "classes", classId, "students", id));
@@ -132,6 +157,11 @@ function ClassDetails() {
 
   // Subjects CRUD
   const addSubject = async (data) => {
+    if (!isAdmin() && !isCC(classId)) {
+      setError("You don't have permission to add subjects.");
+      return;
+    }
+    
     try {
       await addDoc(collection(db, "classes", classId, "subjects"), data);
       setAddSubjectOpen(false);
@@ -145,6 +175,11 @@ function ClassDetails() {
   };
 
   const updateSubject = async (id, data) => {
+    if (!isAdmin() && !isCC(classId)) {
+      setError("You don't have permission to update subjects.");
+      return;
+    }
+    
     try {
       await updateDoc(doc(db, "classes", classId, "subjects", id), data);
       setEditSubjectData(null);
@@ -158,6 +193,11 @@ function ClassDetails() {
   };
 
   const deleteSubject = async (id) => {
+    if (!isAdmin() && !isCC(classId)) {
+      setError("You don't have permission to delete subjects.");
+      return;
+    }
+    
     if (window.confirm("Delete this subject?")) {
       try {
         await deleteDoc(doc(db, "classes", classId, "subjects", id));
@@ -173,6 +213,11 @@ function ClassDetails() {
 
   // Tests CRUD
   const addTest = async (data) => {
+    if (!isAdmin() && !isCC(classId)) {
+      setError("You don't have permission to create tests.");
+      return;
+    }
+    
     try {
       await addDoc(collection(db, "classes", classId, "tests"), data);
       setAddTestOpen(false);
@@ -254,12 +299,14 @@ function ClassDetails() {
           <div className="card">
             <div className="d-flex justify-content-between align-items-center mb-3">
               <h3 className="mb-0">Students</h3>
-              <button
-                onClick={() => setAddStudentOpen(true)}
-                className="btn btn-primary"
-              >
-                Add Student
-              </button>
+              {(isAdmin() || isCC(classId)) && (
+                <button
+                  onClick={() => setAddStudentOpen(true)}
+                  className="btn btn-primary"
+                >
+                  Add Student
+                </button>
+              )}
             </div>
             
             {students.length === 0 ? (
@@ -285,20 +332,22 @@ function ClassDetails() {
                         <td>{s.enrollmentNumber}</td>
                         <td className="hide-mobile">{s.phoneNumber}</td>
                         <td className="text-center">
-                          <div className="d-flex gap-1 justify-content-center">
-                            <button 
-                              onClick={() => setEditStudentData(s)} 
-                              className="btn btn-secondary btn-small"
-                            >
-                              Edit
-                            </button>
-                            <button 
-                              onClick={() => deleteStudent(s.id)}
-                              className="btn btn-danger btn-small"
-                            >
-                              Delete
-                            </button>
-                          </div>
+                          {(isAdmin() || isCC(classId)) && (
+                            <div className="d-flex gap-1 justify-content-center">
+                              <button 
+                                onClick={() => setEditStudentData(s)} 
+                                className="btn btn-secondary btn-small"
+                              >
+                                Edit
+                              </button>
+                              <button 
+                                onClick={() => deleteStudent(s.id)}
+                                className="btn btn-danger btn-small"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -314,12 +363,14 @@ function ClassDetails() {
           <div className="card">
             <div className="d-flex justify-content-between align-items-center mb-3">
               <h3 className="mb-0">Subjects</h3>
-              <button
-                onClick={() => setAddSubjectOpen(true)}
-                className="btn btn-primary"
-              >
-                Add Subject
-              </button>
+              {(isAdmin() || isCC(classId)) && (
+                <button
+                  onClick={() => setAddSubjectOpen(true)}
+                  className="btn btn-primary"
+                >
+                  Add Subject
+                </button>
+              )}
             </div>
             
             {subjects.length === 0 ? (
@@ -343,20 +394,22 @@ function ClassDetails() {
                         <td>{sub.name}</td>
                         <td>{sub.code}</td>
                         <td className="text-center">
-                          <div className="d-flex gap-1 justify-content-center">
-                            <button 
-                              onClick={() => setEditSubjectData(sub)} 
-                              className="btn btn-secondary btn-small"
-                            >
-                              Edit
-                            </button>
-                            <button 
-                              onClick={() => deleteSubject(sub.id)}
-                              className="btn btn-danger btn-small"
-                            >
-                              Delete
-                            </button>
-                          </div>
+                          {(isAdmin() || isCC(classId)) && (
+                            <div className="d-flex gap-1 justify-content-center">
+                              <button 
+                                onClick={() => setEditSubjectData(sub)} 
+                                className="btn btn-secondary btn-small"
+                              >
+                                Edit
+                              </button>
+                              <button 
+                                onClick={() => deleteSubject(sub.id)}
+                                className="btn btn-danger btn-small"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -372,12 +425,14 @@ function ClassDetails() {
           <div className="card">
             <div className="d-flex justify-content-between align-items-center mb-3">
               <h3 className="mb-0">Tests</h3>
-              <button
-                onClick={() => setAddTestOpen(true)}
-                className="btn btn-primary"
-              >
-                Create Test
-              </button>
+              {(isAdmin() || isCC(classId)) && (
+                <button
+                  onClick={() => setAddTestOpen(true)}
+                  className="btn btn-primary"
+                >
+                  Create Test
+                </button>
+              )}
             </div>
             
             {tests.length === 0 ? (
@@ -389,32 +444,34 @@ function ClassDetails() {
               <div className="grid">
                 {tests.map(test => (
                   <div key={test.id} className="test-card">
-                    <div className="card-actions">
-                      <button 
-                        onClick={() => setEditTestData(test)} 
-                        className="btn btn-secondary btn-small"
-                      >
-                        Edit
-                      </button>
-                      <button 
-                        onClick={async () => {
-                          if (window.confirm("Delete this test?")) {
-                            try {
-                              await deleteDoc(doc(db, "classes", classId, "tests", test.id));
-                              setSuccess("Test deleted successfully!");
-                              setTimeout(() => setSuccess(""), 3000);
-                              fetchTests();
-                            } catch (err) {
-                              console.error("Error deleting test:", err);
-                              setError("Failed to delete test.");
+                    {(isAdmin() || isCC(classId)) && (
+                      <div className="card-actions">
+                        <button 
+                          onClick={() => setEditTestData(test)} 
+                          className="btn btn-secondary btn-small"
+                        >
+                          Edit
+                        </button>
+                        <button 
+                          onClick={async () => {
+                            if (window.confirm("Delete this test?")) {
+                              try {
+                                await deleteDoc(doc(db, "classes", classId, "tests", test.id));
+                                setSuccess("Test deleted successfully!");
+                                setTimeout(() => setSuccess(""), 3000);
+                                fetchTests();
+                              } catch (err) {
+                                console.error("Error deleting test:", err);
+                                setError("Failed to delete test.");
+                              }
                             }
-                          }
-                        }}
-                        className="btn btn-danger btn-small"
-                      >
-                        Delete
-                      </button>
-                    </div>
+                          }}
+                          className="btn btn-danger btn-small"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
                     
                     <div onClick={() => navigate(`/class/${classId}/enter-marks/${test.id}`)}>
                       <h3>{test.name}</h3>
@@ -436,17 +493,23 @@ function ClassDetails() {
         )}
 
         {/* Dialogs */}
-        <AddStudentDialog open={addStudentOpen} onClose={() => setAddStudentOpen(false)} onCreate={addStudent} />
+        {(isAdmin() || isCC(classId)) && (
+          <AddStudentDialog open={addStudentOpen} onClose={() => setAddStudentOpen(false)} onCreate={addStudent} />
+        )}
         {editStudentData && (
           <EditStudentDialog open={true} onClose={() => setEditStudentData(null)} studentData={editStudentData} onUpdate={updateStudent} />
         )}
 
-        <AddSubjectDialog open={addSubjectOpen} onClose={() => setAddSubjectOpen(false)} onCreate={addSubject} />
+        {(isAdmin() || isCC(classId)) && (
+          <AddSubjectDialog open={addSubjectOpen} onClose={() => setAddSubjectOpen(false)} onCreate={addSubject} />
+        )}
         {editSubjectData && (
           <EditSubjectDialog open={true} onClose={() => setEditSubjectData(null)} subjectData={editSubjectData} onUpdate={updateSubject} />
         )}
 
-        <AddTestDialog open={addTestOpen} onClose={() => setAddTestOpen(false)} onCreate={addTest} />
+        {(isAdmin() || isCC(classId)) && (
+          <AddTestDialog open={addTestOpen} onClose={() => setAddTestOpen(false)} onCreate={addTest} />
+        )}
         {editTestData && (
           <EditTestDialog open={true} onClose={() => setEditTestData(null)} testData={editTestData} onUpdate={async (data) => {
             try {

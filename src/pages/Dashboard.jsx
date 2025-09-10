@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { collection, getDocs, addDoc } from "firebase/firestore";
 import { db } from "../firebaseConfig";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext"; // Import only once
 import CreateClassDialog from "../components/CreateClassDialog";
 import LoadingSpinner from "../components/LoadingSpinner";
 import ErrorMessage from "../components/ErrorMessage";
@@ -16,6 +17,7 @@ function Dashboard() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const navigate = useNavigate();
+  const { isAdmin, getAccessibleClasses, currentUser } = useAuth();
 
   // Fetch all classes from Firestore
   const fetchClasses = async () => {
@@ -23,7 +25,14 @@ function Dashboard() {
       setLoading(true);
       setError("");
       const snapshot = await getDocs(collection(db, "classes"));
-      setClasses(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const allClasses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      const accessibleClassIds = getAccessibleClasses();
+      if (accessibleClassIds === 'all') {
+        setClasses(allClasses);
+      } else {
+        setClasses(allClasses.filter(cls => accessibleClassIds.includes(cls.id)));
+      }
     } catch (err) {
       console.error("Error fetching classes:", err);
       setError("Failed to load classes. Please try again.");
@@ -38,6 +47,11 @@ function Dashboard() {
 
   // Add new class
   const addClass = async (data) => {
+    if (!isAdmin()) {
+      setError("Only admins can create classes.");
+      return;
+    }
+
     try {
       setError("");
       await addDoc(collection(db, "classes"), data);
@@ -57,12 +71,23 @@ function Dashboard() {
 
   return (
     <>
-      <div className="page-header">
-        <div className="container">
-          <h1>Admin Dashboard</h1>
+      {currentUser && (
+        <div className="page-header">
+          <div className="container">
+            <h1>
+              {isAdmin()
+                ? "Admin Dashboard"
+                : currentUser.assignedClasses?.length > 0
+                ? "Class Coordinator Dashboard"
+                : "Teacher Dashboard"}
+            </h1>
+            <p style={{ margin: 0, opacity: 0.9 }}>
+              Welcome back, {currentUser.name}
+            </p>
+          </div>
         </div>
-      </div>
-      
+      )}
+
       <div className="container">
         <ErrorMessage message={error} onRetry={fetchClasses} />
         <SuccessMessage message={success} />
@@ -70,12 +95,14 @@ function Dashboard() {
         <div className="card">
           <div className="d-flex justify-content-between align-items-center mb-3">
             <h2 className="mb-0">Classes</h2>
-            <button
-              onClick={() => setCreateDialogOpen(true)}
-              className="btn btn-primary"
-            >
-              Create Class
-            </button>
+            {isAdmin() && (
+              <button
+                onClick={() => setCreateDialogOpen(true)}
+                className="btn btn-primary"
+              >
+                Create Class
+              </button>
+            )}
           </div>
 
           {classes.length === 0 ? (
@@ -90,6 +117,20 @@ function Dashboard() {
                   <h3>{cls.className}</h3>
                   <p>{cls.branch} - Semester {cls.semester}</p>
                   <p>Division: {cls.division}</p>
+                  {currentUser && (
+                    <div style={{ fontSize: '0.85rem', color: '#666', marginBottom: '8px' }}>
+                      {currentUser.assignedClasses?.includes(cls.id) && (
+                        <span className="status-badge published" style={{ fontSize: '0.75rem' }}>
+                          Class Coordinator
+                        </span>
+                      )}
+                      {currentUser.assignedSubjects?.some(s => s.classId === cls.id) && (
+                        <span className="status-badge draft" style={{ fontSize: '0.75rem', marginLeft: '4px' }}>
+                          Subject Teacher
+                        </span>
+                      )}
+                    </div>
+                  )}
                   <div className="d-flex gap-1 mt-2">
                     <button
                       onClick={() => navigate(`/class/${cls.id}`)}
@@ -103,13 +144,15 @@ function Dashboard() {
             </div>
           )}
         </div>
+      </div>
 
+      {isAdmin() && (
         <CreateClassDialog
           open={createDialogOpen}
           onClose={() => setCreateDialogOpen(false)}
           onCreate={addClass}
         />
-      </div>
+      )}
     </>
   );
 }
