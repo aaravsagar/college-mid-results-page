@@ -17,7 +17,15 @@ import EditTestDialog from "../components/EditTestDialog";
 function ClassDetails() {
   const { classId } = useParams();
   const navigate = useNavigate();
-  const { isAdmin, isCC, canAccessSubject, getAccessibleSubjects } = useAuth();
+  const { 
+    isAdmin, 
+    isCC, 
+    canAccessSubject, 
+    getAccessibleSubjects,
+    canManageStudents,
+    canManageSubjects,
+    canManageTests
+  } = useAuth();
 
   const [classInfo, setClassInfo] = useState(null);
   const [students, setStudents] = useState([]);
@@ -70,7 +78,13 @@ function ClassDetails() {
       if (accessibleSubjectIds === 'all') {
         setSubjects(allSubjects);
       } else {
-        setSubjects(allSubjects.filter(sub => accessibleSubjectIds.includes(sub.id)));
+        // For teachers, show all subjects but they can only manage their assigned ones
+        if (isAdmin() || isCC(classId)) {
+          setSubjects(allSubjects);
+        } else {
+          // Teachers can see all subjects but only interact with assigned ones
+          setSubjects(allSubjects);
+        }
       }
     } catch (err) {
       console.error("Error fetching subjects:", err);
@@ -101,7 +115,7 @@ function ClassDetails() {
 
   // Students CRUD
   const addStudent = async (data) => {
-    if (!isAdmin() && !isCC(classId)) {
+    if (!canManageStudents(classId)) {
       setError("You don't have permission to add students.");
       return;
     }
@@ -119,7 +133,7 @@ function ClassDetails() {
   };
 
   const updateStudent = async (id, data) => {
-    if (!isAdmin() && !isCC(classId)) {
+    if (!canManageStudents(classId)) {
       setError("You don't have permission to update students.");
       return;
     }
@@ -137,7 +151,7 @@ function ClassDetails() {
   };
 
   const deleteStudent = async (id) => {
-    if (!isAdmin() && !isCC(classId)) {
+    if (!canManageStudents(classId)) {
       setError("You don't have permission to delete students.");
       return;
     }
@@ -157,7 +171,7 @@ function ClassDetails() {
 
   // Subjects CRUD
   const addSubject = async (data) => {
-    if (!isAdmin() && !isCC(classId)) {
+    if (!canManageSubjects(classId)) {
       setError("You don't have permission to add subjects.");
       return;
     }
@@ -175,7 +189,7 @@ function ClassDetails() {
   };
 
   const updateSubject = async (id, data) => {
-    if (!isAdmin() && !isCC(classId)) {
+    if (!canManageSubjects(classId)) {
       setError("You don't have permission to update subjects.");
       return;
     }
@@ -193,7 +207,7 @@ function ClassDetails() {
   };
 
   const deleteSubject = async (id) => {
-    if (!isAdmin() && !isCC(classId)) {
+    if (!canManageSubjects(classId)) {
       setError("You don't have permission to delete subjects.");
       return;
     }
@@ -213,7 +227,7 @@ function ClassDetails() {
 
   // Tests CRUD
   const addTest = async (data) => {
-    if (!isAdmin() && !isCC(classId)) {
+    if (!canManageTests(classId)) {
       setError("You don't have permission to create tests.");
       return;
     }
@@ -238,7 +252,7 @@ function ClassDetails() {
     return (
       <div className="container">
         <ErrorMessage message="Class not found" />
-        <button onClick={() => navigate("/")} className="btn btn-primary">
+        <button onClick={() => navigate("/dashboard")} className="btn btn-primary">
           Back to Dashboard
         </button>
       </div>
@@ -265,7 +279,7 @@ function ClassDetails() {
         {/* Navigation */}
         <div className="d-flex justify-content-between align-items-center mb-3">
           <button 
-            onClick={() => navigate("/")} 
+            onClick={() => navigate("/dashboard")} 
             className="btn btn-secondary"
           >
             ← Back to Dashboard
@@ -299,7 +313,7 @@ function ClassDetails() {
           <div className="card">
             <div className="d-flex justify-content-between align-items-center mb-3">
               <h3 className="mb-0">Students</h3>
-              {(isAdmin() || isCC(classId)) && (
+              {canManageStudents(classId) && (
                 <button
                   onClick={() => setAddStudentOpen(true)}
                   className="btn btn-primary"
@@ -332,7 +346,7 @@ function ClassDetails() {
                         <td>{s.enrollmentNumber}</td>
                         <td className="hide-mobile">{s.phoneNumber}</td>
                         <td className="text-center">
-                          {(isAdmin() || isCC(classId)) && (
+                          {canManageStudents(classId) && (
                             <div className="d-flex gap-1 justify-content-center">
                               <button 
                                 onClick={() => setEditStudentData(s)} 
@@ -363,7 +377,7 @@ function ClassDetails() {
           <div className="card">
             <div className="d-flex justify-content-between align-items-center mb-3">
               <h3 className="mb-0">Subjects</h3>
-              {(isAdmin() || isCC(classId)) && (
+              {canManageSubjects(classId) && (
                 <button
                   onClick={() => setAddSubjectOpen(true)}
                   className="btn btn-primary"
@@ -385,6 +399,8 @@ function ClassDetails() {
                     <tr>
                       <th>Subject Name</th>
                       <th>Subject Code</th>
+                      <th className="hide-mobile">Total Marks</th>
+                      <th className="hide-mobile">Assigned Teacher</th>
                       <th className="text-center">Actions</th>
                     </tr>
                   </thead>
@@ -393,8 +409,20 @@ function ClassDetails() {
                       <tr key={sub.id}>
                         <td>{sub.name}</td>
                         <td>{sub.code}</td>
+                        <td className="hide-mobile">{sub.totalMarks || 30}</td>
+                        <td className="hide-mobile">
+                          {sub.assignedTeacher ? (
+                            <span style={{ fontSize: '0.85rem', color: '#27ae60' }}>
+                              Assigned
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: '0.85rem', color: '#7f8c8d' }}>
+                              Not assigned
+                            </span>
+                          )}
+                        </td>
                         <td className="text-center">
-                          {(isAdmin() || isCC(classId)) && (
+                          {canManageSubjects(classId) && (
                             <div className="d-flex gap-1 justify-content-center">
                               <button 
                                 onClick={() => setEditSubjectData(sub)} 
@@ -425,7 +453,7 @@ function ClassDetails() {
           <div className="card">
             <div className="d-flex justify-content-between align-items-center mb-3">
               <h3 className="mb-0">Tests</h3>
-              {(isAdmin() || isCC(classId)) && (
+              {canManageTests(classId) && (
                 <button
                   onClick={() => setAddTestOpen(true)}
                   className="btn btn-primary"
@@ -444,7 +472,7 @@ function ClassDetails() {
               <div className="grid">
                 {tests.map(test => (
                   <div key={test.id} className="test-card">
-                    {(isAdmin() || isCC(classId)) && (
+                    {canManageTests(classId) && (
                       <div className="card-actions">
                         <button 
                           onClick={() => setEditTestData(test)} 
@@ -456,6 +484,10 @@ function ClassDetails() {
                           onClick={async () => {
                             if (window.confirm("Delete this test?")) {
                               try {
+                                if (!canManageTests(classId)) {
+                                  setError("You don't have permission to delete tests.");
+                                  return;
+                                }
                                 await deleteDoc(doc(db, "classes", classId, "tests", test.id));
                                 setSuccess("Test deleted successfully!");
                                 setTimeout(() => setSuccess(""), 3000);
@@ -493,36 +525,56 @@ function ClassDetails() {
         )}
 
         {/* Dialogs */}
-        {(isAdmin() || isCC(classId)) && (
+        {canManageStudents(classId) && (
           <AddStudentDialog open={addStudentOpen} onClose={() => setAddStudentOpen(false)} onCreate={addStudent} />
         )}
         {editStudentData && (
           <EditStudentDialog open={true} onClose={() => setEditStudentData(null)} studentData={editStudentData} onUpdate={updateStudent} />
         )}
 
-        {(isAdmin() || isCC(classId)) && (
-          <AddSubjectDialog open={addSubjectOpen} onClose={() => setAddSubjectOpen(false)} onCreate={addSubject} />
+        {canManageSubjects(classId) && (
+          <AddSubjectDialog
+            open={addSubjectOpen}
+            onClose={() => setAddSubjectOpen(false)}
+            onCreate={addSubject}
+            classId={classId}
+          />
         )}
         {editSubjectData && (
-          <EditSubjectDialog open={true} onClose={() => setEditSubjectData(null)} subjectData={editSubjectData} onUpdate={updateSubject} />
+          <EditSubjectDialog
+            open={true}
+            onClose={() => setEditSubjectData(null)}
+            subjectData={editSubjectData}
+            onUpdate={updateSubject}
+            classId={classId}
+          />
         )}
 
-        {(isAdmin() || isCC(classId)) && (
+        {canManageTests(classId) && (
           <AddTestDialog open={addTestOpen} onClose={() => setAddTestOpen(false)} onCreate={addTest} />
         )}
         {editTestData && (
-          <EditTestDialog open={true} onClose={() => setEditTestData(null)} testData={editTestData} onUpdate={async (data) => {
-            try {
-              await updateDoc(doc(db, "classes", classId, "tests", editTestData.id), data);
-              setEditTestData(null);
-              setSuccess("Test updated successfully!");
-              setTimeout(() => setSuccess(""), 3000);
-              fetchTests();
-            } catch (err) {
-              console.error("Error updating test:", err);
-              setError("Failed to update test.");
-            }
-          }} />
+          <EditTestDialog 
+            open={true} 
+            onClose={() => setEditTestData(null)} 
+            testData={editTestData} 
+            onUpdate={async (data) => {
+              try {
+                if (!canManageTests(classId)) {
+                  setError("You don't have permission to update tests.");
+                  return;
+                }
+                await updateDoc(doc(db, "classes", classId, "tests", editTestData.id), data);
+                setEditTestData(null);
+                setSuccess("Test updated successfully!");
+                setTimeout(() => setSuccess(""), 3000);
+                fetchTests();
+              } catch (err) {
+                console.error("Error updating test:", err);
+                setError("Failed to update test.");
+              }
+            }} 
+          />
         )}
       </div>
     </>

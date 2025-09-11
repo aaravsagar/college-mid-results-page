@@ -9,11 +9,11 @@ function ProtectedRoute({ children, requireAdmin = false, classId = null }) {
   }
 
   if (requireAdmin && !isAdmin()) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   if (classId && !canAccessClass(classId)) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return children;

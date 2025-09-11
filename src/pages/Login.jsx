@@ -32,7 +32,7 @@ function Login() {
 
   // Redirect if already logged in
   if (currentUser) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   const handleSubmit = async (e) => {
@@ -62,19 +62,20 @@ function Login() {
         setCurrentUser(adminUser);
         localStorage.setItem('currentUser', JSON.stringify(adminUser));
 
-        navigate('/', { replace: true });
+        navigate('/dashboard', { replace: true });
         return;
       }
 
       // Otherwise, use normal login (Firestore)
       await login(values.email, values.password);
-      navigate('/', { replace: true });
+      navigate('/dashboard', { replace: true });
     } catch (err) {
       console.error('Login error:', err);
       setError(err.message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
+    navigate('/login');
   };
 
   return (

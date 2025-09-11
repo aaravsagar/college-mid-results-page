@@ -8,7 +8,7 @@ function Header() {
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate('/');
   };
 
   const isActive = (path) => location.pathname === path;
@@ -18,13 +18,15 @@ function Header() {
       <div className="container">
         <div className="header-content">
           <div className="header-left">
-            <h1 className="header-title">Mid-Semester Results</h1>
+            <h1 className="header-title" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>
+              Mid-Semester Results Portal
+            </h1>
             
             {currentUser && (
               <nav className="header-nav">
                 <button
-                  onClick={() => navigate('/')}
-                  className={`nav-link ${isActive('/') ? 'active' : ''}`}
+                  onClick={() => navigate('/dashboard')}
+                  className={`nav-link ${isActive('/dashboard') ? 'active' : ''}`}
                 >
                   Dashboard
                 </button>
@@ -40,9 +42,9 @@ function Header() {
                 
                 <button
                   onClick={() => navigate('/results')}
-                  className={`nav-link ${isActive('/results') ? 'active' : ''}`}
+                  className={`nav-link ${location.pathname.startsWith('/results') ? 'active' : ''}`}
                 >
-                  Public Results
+                  Results
                 </button>
               </nav>
             )}

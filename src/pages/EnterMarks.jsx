@@ -11,7 +11,7 @@ import SuccessMessage from "../components/SuccessMessage";
 function EnterMarks() {
   const { classId, testId } = useParams();
   const navigate = useNavigate();
-  const { isAdmin, isCC, canAccessSubject, getAccessibleSubjects } = useAuth();
+  const { isAdmin, isCC, canAccessSubject, getAccessibleSubjects, canManageTests, currentUser } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -38,13 +38,11 @@ function EnterMarks() {
 
         const subjectsSnap = await getDocs(collection(db, "classes", classId, "subjects"));
         const allSubjects = subjectsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        
-        // Filter subjects based on user permissions
-        const accessibleSubjectIds = getAccessibleSubjects(classId);
-        if (accessibleSubjectIds === 'all') {
+
+        if (isAdmin() || isCC(classId)) {
           setSubjects(allSubjects);
         } else {
-          setSubjects(allSubjects.filter(sub => accessibleSubjectIds.includes(sub.id)));
+          setSubjects(allSubjects);
         }
 
         const testDocSnap = await getDoc(doc(db, "classes", classId, "tests", testId));
@@ -67,18 +65,22 @@ function EnterMarks() {
   }, [classId, testId]);
 
   const handleMarkChange = (studentId, subjectId, value) => {
-    // Check if user can access this subject
-    if (!canAccessSubject(classId, subjectId)) {
-      return;
+    if (!isAdmin() && !isCC(classId)) {
+      const hasSubjectAssigned = currentUser?.assignedSubjects?.some(
+        a => a.classId === classId && a.subjectId === subjectId
+      );
+      if (!hasSubjectAssigned) {
+        return;
+      }
     }
-    
+
     const numValue = value === "" ? "" : Number(value);
     const maxMarks = subjects.find(s => s.id === subjectId)?.totalMarks || 30;
-    
+
     if (numValue !== "" && (numValue < 0 || numValue > maxMarks)) {
-      return; // Don't allow invalid values
+      return;
     }
-    
+
     setMarks(prev => ({
       ...prev,
       [studentId]: { ...prev[studentId], [subjectId]: numValue }
@@ -86,31 +88,28 @@ function EnterMarks() {
   };
 
   const handleSaveMarks = async () => {
-    if (!isAdmin() && !isCC(classId)) {
-      // For regular teachers, check if they have any accessible subjects
-      const accessibleSubjectIds = getAccessibleSubjects(classId);
-      if (accessibleSubjectIds.length === 0) {
-        setError("You don't have permission to save marks.");
-        return;
-      }
+    const accessibleSubjectIds = getAccessibleSubjects(classId);
+    if (accessibleSubjectIds !== 'all' && accessibleSubjectIds.length === 0) {
+      setError("You don't have permission to save marks.");
+      return;
     }
-    
+
     setSaving(true);
     setError("");
     try {
-    for (let studentId in marks) {
-      await setDoc(
-        doc(db, "classes", classId, "tests", testId, "marks", studentId),
-        {
-          studentId,
-          marks: marks[studentId],
-          subjectsTotal: subjects.reduce((acc, sub) => {
+      for (let studentId in marks) {
+        await setDoc(
+          doc(db, "classes", classId, "tests", testId, "marks", studentId),
+          {
+            studentId,
+            marks: marks[studentId],
+            subjectsTotal: subjects.reduce((acc, sub) => {
               acc[sub.id] = sub.totalMarks || 30;
-            return acc;
-          }, {})
-        }
-      );
-    }
+              return acc;
+            }, {})
+          }
+        );
+      }
       setSuccess("Marks saved successfully!");
       setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
@@ -122,16 +121,15 @@ function EnterMarks() {
   };
 
   const handlePublish = async () => {
-    if (!isAdmin() && !isCC(classId)) {
+    if (!canManageTests(classId)) {
       setError("Only admins and class coordinators can publish tests.");
       return;
     }
-    
+
     if (window.confirm("Are you sure you want to publish this test? Students will be able to view their results.")) {
       setPublishing(true);
       setError("");
       try {
-        // Save marks first
         for (let studentId in marks) {
           await setDoc(
             doc(db, "classes", classId, "tests", testId, "marks", studentId),
@@ -145,8 +143,7 @@ function EnterMarks() {
             }
           );
         }
-        
-        // Then publish
+
         await updateDoc(doc(db, "classes", classId, "tests", testId), { published: true });
         setTestInfo(prev => ({ ...prev, published: true }));
         setSuccess("Test published successfully! Students can now view their results.");
@@ -163,7 +160,7 @@ function EnterMarks() {
   if (loading) {
     return <LoadingSpinner text="Loading test data..." />;
   }
-  
+
   if (!classInfo || !testInfo) {
     return (
       <div className="container">
@@ -183,28 +180,9 @@ function EnterMarks() {
           <p style={{ margin: 0, opacity: 0.9 }}>
             {classInfo.className} - {classInfo.branch}-{classInfo.semester}-{classInfo.division}
           </p>
-          {(isAdmin() || isCC(classId)) && (
-            <button 
-              onClick={handlePublish} 
-              className="btn btn-success"
-              disabled={testInfo.published || saving || publishing}
-            >
-              {publishing ? (
-                <>
-                  <div className="loading-spinner"></div>
-                  Publishing...
-                </>
-              ) : testInfo.published ? (
-                "Published"
-              ) : (
-                "Publish Test"
-              )}
-            </button>
-          )}
-          
           <div className="d-flex gap-2">
-            <button 
-              onClick={handleSaveMarks} 
+            <button
+              onClick={handleSaveMarks}
               className="btn btn-secondary"
               disabled={saving || publishing}
             >
@@ -217,8 +195,8 @@ function EnterMarks() {
                 "Save Marks"
               )}
             </button>
-            <button 
-              onClick={handlePublish} 
+            {canManageTests(classId) && <button
+              onClick={handlePublish}
               className="btn btn-success"
               disabled={testInfo.published || saving || publishing}
             >
@@ -232,7 +210,7 @@ function EnterMarks() {
               ) : (
                 "Publish Test"
               )}
-            </button>
+            </button>}
           </div>
         </div>
       </div>
@@ -277,21 +255,31 @@ function EnterMarks() {
                       </td>
                       {subjects.map(sub => (
                         <td key={sub.id} className="text-center">
-                          <input
-                            type="number"
-                            min="0"
-                            max={sub.totalMarks || 30}
-                            value={marks[student.id]?.[sub.id] ?? ""}
-                            onChange={e => handleMarkChange(student.id, sub.id, e.target.value)}
-                            className="form-input"
-                            style={{ 
-                              width: "80px", 
-                              textAlign: "center",
-                              fontSize: "14px"
-                            }}
-                            placeholder="0"
-                            disabled={!canAccessSubject(classId, sub.id)}
-                          />
+                          {(() => {
+                            const canEdit = isAdmin() || isCC(classId) ||
+                              currentUser?.assignedSubjects?.some(
+                                a => a.classId === classId && a.subjectId === sub.id
+                              );
+
+                            return (
+                              <input
+                                type="number"
+                                min="0"
+                                max={sub.totalMarks || 30}
+                                value={marks[student.id]?.[sub.id] ?? ""}
+                                onChange={e => handleMarkChange(student.id, sub.id, e.target.value)}
+                                className="form-input"
+                                style={{
+                                  width: "80px",
+                                  textAlign: "center",
+                                  fontSize: "14px",
+                                  backgroundColor: canEdit ? "white" : "#f5f5f5"
+                                }}
+                                placeholder="0"
+                                disabled={!canEdit}
+                              />
+                            );
+                          })()}
                         </td>
                       ))}
                     </tr>

@@ -1,9 +1,13 @@
 import { useState, useEffect } from 'react';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../firebaseConfig';
 import { useFormValidation, validationRules } from '../hooks/useFormValidation';
 import FormInput from './FormInput';
 
-function EditUserDialog({ open, onClose, userData, onUpdate, classes }) {
+function EditUserDialog({ open, onClose, userData, onUpdate }) {
   const [loading, setLoading] = useState(false);
+  const [classes, setClasses] = useState([]);
+  const [subjects, setSubjects] = useState({});
   
   const {
     values,
@@ -29,6 +33,31 @@ function EditUserDialog({ open, onClose, userData, onUpdate, classes }) {
       role: [validationRules.required]
     }
   );
+
+  // Fetch classes and their subjects when dialog opens
+  useEffect(() => {
+    if (open) {
+      fetchClassesAndSubjects();
+    }
+  }, [open]);
+
+  const fetchClassesAndSubjects = async () => {
+    try {
+      const classesSnap = await getDocs(collection(db, 'classes'));
+      const classesData = classesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setClasses(classesData);
+
+      // Fetch subjects for each class
+      const subjectsData = {};
+      for (const cls of classesData) {
+        const subjectsSnap = await getDocs(collection(db, 'classes', cls.id, 'subjects'));
+        subjectsData[cls.id] = subjectsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      }
+      setSubjects(subjectsData);
+    } catch (error) {
+      console.error('Error fetching classes and subjects:', error);
+    }
+  };
 
   useEffect(() => {
     if (userData && open) {
@@ -75,6 +104,14 @@ function EditUserDialog({ open, onClose, userData, onUpdate, classes }) {
       : values.assignedClasses.filter(id => id !== classId);
     
     handleChange('assignedClasses', newAssignedClasses);
+  };
+
+  const handleSubjectAssignment = (classId, subjectId, isChecked) => {
+    const newAssignedSubjects = isChecked
+      ? [...values.assignedSubjects, { classId, subjectId }]
+      : values.assignedSubjects.filter(a => !(a.classId === classId && a.subjectId === subjectId));
+    
+    handleChange('assignedSubjects', newAssignedSubjects);
   };
 
   if (!open) return null;
@@ -151,6 +188,35 @@ function EditUserDialog({ open, onClose, userData, onUpdate, classes }) {
               </div>
             </div>
           )}
+
+          {values.role === 'teacher' && classes.length > 0 && (
+            <div className="form-group">
+              <label className="form-label">Assign Subjects</label>
+              <div className="checkbox-group" style={{ maxHeight: '300px' }}>
+                {classes.map(cls => (
+                  <div key={cls.id} style={{ marginBottom: '15px' }}>
+                    <div style={{ fontWeight: 'bold', color: '#1e3c72', marginBottom: '8px', borderBottom: '1px solid #ecf0f1', paddingBottom: '4px' }}>
+                      {cls.className} ({cls.branch}-{cls.semester}-{cls.division})
+                    </div>
+                    {subjects[cls.id]?.length > 0 ? subjects[cls.id].map(subject => (
+                      <label key={`${cls.id}-${subject.id}`} className="checkbox-item" style={{ marginLeft: '15px' }}>
+                        <input
+                          type="checkbox"
+                          checked={values.assignedSubjects.some(a => a.classId === cls.id && a.subjectId === subject.id)}
+                          onChange={(e) => handleSubjectAssignment(cls.id, subject.id, e.target.checked)}
+                        />
+                        <span>{subject.name} ({subject.code})</span>
+                      </label>
+                    )) : (
+                      <div style={{ marginLeft: '15px', fontSize: '0.85rem', color: '#666', fontStyle: 'italic' }}>
+                        No subjects available
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           
           <div className="modal-actions">
             <button 
@@ -182,4 +248,4 @@ function EditUserDialog({ open, onClose, userData, onUpdate, classes }) {
   );
 }
 
-export default EditUserDialog;// This is the initial content for src/components/EditUserDialog.jsx
+export default EditUserDialog;

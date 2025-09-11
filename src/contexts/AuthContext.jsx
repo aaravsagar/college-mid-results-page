@@ -90,20 +90,25 @@ export function AuthProvider({ children }) {
   const canAccessClass = (classId) => {
     if (isAdmin()) return true;
     if (isCC(classId)) return true;
-    return currentUser?.assignedSubjects?.some(a => a.classId === classId);
+    return currentUser?.assignedSubjects?.some(a => a.classId === classId) || false;
   };
 
   const canAccessSubject = (classId, subjectId) => {
     if (isAdmin()) return true;
     if (isCC(classId)) return true;
-    return currentUser?.assignedSubjects?.some(a => a.classId === classId && a.subjectId === subjectId);
+    return currentUser?.assignedSubjects?.some(a => a.classId === classId && a.subjectId === subjectId) || false;
   };
 
   const getAccessibleClasses = () => {
     if (isAdmin()) return 'all';
     const classIds = new Set();
+    
+    // Add classes where user is CC
     currentUser?.assignedClasses?.forEach(id => classIds.add(id));
+    
+    // Add classes where user has assigned subjects
     currentUser?.assignedSubjects?.forEach(a => classIds.add(a.classId));
+    
     return Array.from(classIds);
   };
 
@@ -113,6 +118,17 @@ export function AuthProvider({ children }) {
     return currentUser?.assignedSubjects?.filter(a => a.classId === classId)?.map(a => a.subjectId) || [];
   };
 
+  const canManageStudents = (classId) => {
+    return isAdmin() || isCC(classId);
+  };
+
+  const canManageSubjects = (classId) => {
+    return isAdmin() || isCC(classId);
+  };
+
+  const canManageTests = (classId) => {
+    return isAdmin() || isCC(classId);
+  };
   const value = {
     currentUser,
     setCurrentUser, // <-- exposed for direct use if needed
@@ -123,7 +139,10 @@ export function AuthProvider({ children }) {
     canAccessClass,
     canAccessSubject,
     getAccessibleClasses,
-    getAccessibleSubjects
+    getAccessibleSubjects,
+    canManageStudents,
+    canManageSubjects,
+    canManageTests
   };
 
   return (

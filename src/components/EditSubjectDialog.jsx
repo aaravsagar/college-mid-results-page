@@ -1,52 +1,144 @@
 import { useState, useEffect } from "react";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../firebaseConfig";
 
-function EditSubjectDialog({ open, onClose, subjectData, onUpdate }) {
+function EditSubjectDialog({ open, onClose, subjectData, onUpdate, classId }) {
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
+  const [totalMarks, setTotalMarks] = useState(30);
+  const [assignedTeacher, setAssignedTeacher] = useState("");
+  const [teachers, setTeachers] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      fetchTeachers();
+    }
+  }, [open]);
 
   useEffect(() => {
     if (subjectData) {
-      setName(subjectData.name);
-      setCode(subjectData.code);
+      setName(subjectData.name || "");
+      setCode(subjectData.code || "");
+      setTotalMarks(subjectData.totalMarks || 30);
+      setAssignedTeacher(subjectData.assignedTeacher || "");
     }
   }, [subjectData]);
+
+  const fetchTeachers = async () => {
+    setLoading(true);
+    try {
+      const usersSnap = await getDocs(collection(db, "users"));
+      const teachersList = usersSnap.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(user => user.role === 'teacher');
+      setTeachers(teachersList);
+    } catch (err) {
+      console.error("Error fetching teachers:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!name.trim() || !code.trim()) {
-      alert("All fields are required.");
+      alert("Subject name and code are required.");
       return;
     }
-    onUpdate(subjectData.id, { name, code });
+    
+    const updatedData = {
+      name: name.trim(),
+      code: code.trim(),
+      totalMarks: Number(totalMarks),
+      assignedTeacher: assignedTeacher || null
+    };
+    
+    onUpdate(subjectData.id, updatedData);
   };
 
   if (!open) return null;
 
   return (
-    <div style={{
-      position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
-      backgroundColor: "rgba(0,0,0,0.3)",
-      display: "flex", justifyContent: "center", alignItems: "center"
-    }}>
-      <div style={{
-        backgroundColor: "#fff",
-        border: "1px solid #ccc",
-        padding: "20px",
-        width: "320px",
-        borderRadius: "6px",
-        fontFamily: "Arial, sans-serif",
-        boxShadow: "0 4px 8px rgba(0,0,0,0.1)"
-      }}>
-        <h3 style={{ borderBottom: "1px solid #ccc", paddingBottom: "5px", marginBottom: "15px" }}>Edit Subject</h3>
+    <div className="modal-overlay">
+      <div className="modal">
+        <h3>Edit Subject</h3>
         <form onSubmit={handleSubmit}>
-          <input type="text" placeholder="Subject Name" value={name} onChange={e => setName(e.target.value)}
-            style={{ width: "100%", padding: "8px", marginBottom: "10px", borderRadius: "4px", border: "1px solid #ccc" }} required />
-          <input type="text" placeholder="Subject Code" value={code} onChange={e => setCode(e.target.value)}
-            style={{ width: "100%", padding: "8px", marginBottom: "15px", borderRadius: "4px", border: "1px solid #ccc" }} required />
+          <div className="form-group">
+            <label className="form-label">
+              Subject Name <span className="text-danger">*</span>
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="form-input"
+              placeholder="Enter subject name"
+              required
+            />
+          </div>
 
-          <div style={{ textAlign: "right" }}>
-            <button type="button" onClick={onClose} style={{ padding: "6px 12px", marginRight: "10px", borderRadius: "4px", border: "1px solid #ccc", background: "#f0f0f0", cursor: "pointer" }}>Cancel</button>
-            <button type="submit" style={{ padding: "6px 12px", borderRadius: "4px", border: "none", background: "#000", color: "#fff", cursor: "pointer" }}>Update</button>
+          <div className="form-group">
+            <label className="form-label">
+              Subject Code <span className="text-danger">*</span>
+            </label>
+            <input
+              type="text"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              className="form-input"
+              placeholder="Enter subject code"
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Total Marks</label>
+            <input
+              type="number"
+              value={totalMarks}
+              onChange={(e) => setTotalMarks(e.target.value)}
+              className="form-input"
+              min="1"
+              max="100"
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Assign Teacher</label>
+            <select
+              value={assignedTeacher}
+              onChange={(e) => setAssignedTeacher(e.target.value)}
+              className="form-input"
+            >
+              <option value="">Select a teacher (optional)</option>
+              {teachers.map(teacher => (
+                <option key={teacher.id} value={teacher.id}>
+                  {teacher.name} ({teacher.email})
+                </option>
+              ))}
+            </select>
+            {loading && (
+              <div style={{ fontSize: "0.8rem", color: "#666", marginTop: "4px" }}>
+                Loading teachers...
+              </div>
+            )}
+          </div>
+
+          <div className="modal-actions">
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn btn-secondary"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="btn btn-primary"
+            >
+              Update Subject
+            </button>
           </div>
         </form>
       </div>

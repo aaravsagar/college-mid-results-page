@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Header from "./components/Header";
+import Footer from "./components/Footer";
 import Login from "./pages/Login";
 import UserManagement from "./pages/UserManagement";
 import Dashboard from "./pages/Dashboard";
@@ -14,52 +15,58 @@ function App() {
   return (
     <AuthProvider>
       <Router>
-        <Header />
-        <Routes>
-          {/* Authentication */}
-          <Route path="/login" element={<Login />} />
+        <div className="app-wrapper">
+          <Header />
+          <main className="main-content">
+            <Routes>
+              {/* Authentication */}
+              <Route path="/" element={<Login />} />
+              <Route path="/login" element={<Login />} />
 
-          {/* Protected Admin Routes */}
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
+              {/* Protected Admin Routes */}
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
 
-          <Route
-            path="/users"
-            element={
-              <ProtectedRoute requireAdmin={true}>
-                <UserManagement />
-              </ProtectedRoute>
-            }
-          />
+              <Route
+                path="/users"
+                element={
+                  <ProtectedRoute requireAdmin={true}>
+                    <UserManagement />
+                  </ProtectedRoute>
+                }
+              />
 
-          <Route
-            path="/class/:classId"
-            element={
-              <ProtectedRoute>
-                <ClassDetails />
-              </ProtectedRoute>
-            }
-          />
+              <Route
+                path="/class/:classId"
+                element={
+                  <ProtectedRoute>
+                    <ClassDetails />
+                  </ProtectedRoute>
+                }
+              />
 
-          <Route
-            path="/class/:classId/enter-marks/:testId"
-            element={
-              <ProtectedRoute>
-                <EnterMarks />
-              </ProtectedRoute>
-            }
-          />
+              <Route
+                path="/class/:classId/enter-marks/:testId"
+                element={
+                  <ProtectedRoute>
+                    <EnterMarks />
+                  </ProtectedRoute>
+                }
+              />
 
-          {/* Public Routes */}
-          <Route path="/results" element={<PublicResultsList />} />
-          <Route path="/results/:classId/:testId" element={<PublicResultView />} />
-        </Routes>
+              {/* Public Routes */}
+              <Route path="/results" element={<PublicResultsList />} />
+              <Route path="/results/:classId/:testId" element={<PublicResultView />} />
+            </Routes>
+          </main>
+          <Footer />
+        </div>
       </Router>
     </AuthProvider>
   );

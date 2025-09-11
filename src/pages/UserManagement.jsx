@@ -12,7 +12,6 @@ import EditUserDialog from '../components/EditUserDialog';
 
 function UserManagement() {
   const [users, setUsers] = useState([]);
-  const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -29,13 +28,11 @@ function UserManagement() {
     setLoading(true);
     setError('');
     try {
-      const [usersSnap, classesSnap] = await Promise.all([
+      const [usersSnap] = await Promise.all([
         getDocs(collection(db, 'users')),
-        getDocs(collection(db, 'classes')),
       ]);
 
       setUsers(usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      setClasses(classesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     } catch (err) {
       console.error('Error fetching data:', err);
       setError('Failed to load data. Please try again.');
@@ -106,22 +103,6 @@ function UserManagement() {
     }
   };
 
-  const getClassNames = (classIds) => {
-    if (!classIds || classIds.length === 0) return 'None';
-    return classIds.map(id => {
-      const cls = classes.find(c => c.id === id);
-      return cls ? `${cls.className} (${cls.branch}-${cls.semester}-${cls.division})` : 'Unknown';
-    }).join(', ');
-  };
-
-  const getSubjectAssignments = (assignments) => {
-    if (!assignments || assignments.length === 0) return 'None';
-    return assignments.map(assignment => {
-      const cls = classes.find(c => c.id === assignment.classId);
-      return cls ? `${cls.className} - Subject ${assignment.subjectId}` : 'Unknown';
-    }).join(', ');
-  };
-
   if (!isAdmin()) {
     return (
       <div className="container">
@@ -173,8 +154,7 @@ function UserManagement() {
                     <th>Name</th>
                     <th>Email</th>
                     <th>Role</th>
-                    <th className="hide-mobile">CC Classes</th>
-                    <th className="hide-mobile">Subject Assignments</th>
+                    <th className="hide-mobile">Assignments</th>
                     <th className="text-center">Actions</th>
                   </tr>
                 </thead>
@@ -188,11 +168,18 @@ function UserManagement() {
                           {user.role}
                         </span>
                       </td>
-                      <td className="hide-mobile" style={{ fontSize: '0.9rem' }}>
-                        {getClassNames(user.assignedClasses)}
-                      </td>
-                      <td className="hide-mobile" style={{ fontSize: '0.9rem' }}>
-                        {getSubjectAssignments(user.assignedSubjects)}
+                      <td className="hide-mobile" style={{ fontSize: '0.85rem' }}>
+                        {user.assignedClasses?.length > 0 && (
+                          <div style={{ marginBottom: '4px' }}>
+                            <strong>CC:</strong> {user.assignedClasses.length} class(es)
+                          </div>
+                        )}
+                        {user.assignedSubjects?.length > 0 && (
+                          <div>
+                            <strong>Subjects:</strong> {user.assignedSubjects.length} assignment(s)
+                          </div>
+                        )}
+                        {(!user.assignedClasses?.length && !user.assignedSubjects?.length) && 'None'}
                       </td>
                       <td className="text-center">
                         <div className="d-flex gap-1 justify-content-center">
@@ -224,7 +211,6 @@ function UserManagement() {
           open={createDialogOpen}
           onClose={() => setCreateDialogOpen(false)}
           onCreate={createUser}
-          classes={classes}
         />
 
         {editUserData && (
@@ -233,7 +219,6 @@ function UserManagement() {
             onClose={() => setEditUserData(null)}
             userData={editUserData}
             onUpdate={updateUser}
-            classes={classes}
           />
         )}
       </div>

@@ -62,6 +62,14 @@ function PublicResultsList() {
 
   return (
     <>
+      {/* SAL Institute Header */}
+      <div className="portal-header">
+        <div className="container">
+          <h1 className="institute-name">SAL INSTITUTE OF DIPLOMA STUDIES</h1>
+          <p className="project-name">MID-SEMESTER RESULTS PORTAL</p>
+        </div>
+      </div>
+
       <div className="page-header">
         <div className="container">
           <h1>Published Test Results</h1>
