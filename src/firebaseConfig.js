@@ -4,12 +4,13 @@ import { getFirestore } from "firebase/firestore";
 
 // Firebase configuration as provided
 const firebaseConfig = {
-  apiKey: "AIzaSyCyBmUwkhQcE6W8is7-6FeiMTtKkGj0vfE",
-  authDomain: "portfolio-75f1f.firebaseapp.com",
-  projectId: "portfolio-75f1f",
-  storageBucket: "portfolio-75f1f.firebasestorage.app",
-  messagingSenderId: "167491625034",
-  appId: "1:167491625034:web:84521a6db170b9bd92c6b3"
+  apiKey: "AIzaSyDminyfaFOmc3AjBjCfjcqrzesUcik9wfg",
+  authDomain: "sids-mid-marks-result-portal.firebaseapp.com",
+  projectId: "sids-mid-marks-result-portal",
+  storageBucket: "sids-mid-marks-result-portal.firebasestorage.app",
+  messagingSenderId: "183766513957",
+  appId: "1:183766513957:web:bc36c95932c006a11542cc",
+  measurementId: "G-ZG3R4EBEGF"
 };
 
 // Initialize Firebase

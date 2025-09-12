@@ -38,12 +38,7 @@ function EnterMarks() {
 
         const subjectsSnap = await getDocs(collection(db, "classes", classId, "subjects"));
         const allSubjects = subjectsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-        if (isAdmin() || isCC(classId)) {
-          setSubjects(allSubjects);
-        } else {
-          setSubjects(allSubjects);
-        }
+        setSubjects(allSubjects);
 
         const testDocSnap = await getDoc(doc(db, "classes", classId, "tests", testId));
         if (testDocSnap.exists()) setTestInfo({ id: testDocSnap.id, ...testDocSnap.data() });
@@ -63,6 +58,18 @@ function EnterMarks() {
     };
     fetchData();
   }, [classId, testId]);
+
+  const accessibleSubjects = (() => {
+    if (isAdmin() || isCC(classId)) {
+      return subjects;
+    }
+    const assigned = currentUser?.assignedSubjects?.filter(a => a.classId === classId) || [];
+    if (assigned.length === 1) {
+      return subjects.filter(sub => sub.id === assigned[0].subjectId);
+    } else {
+      return subjects;
+    }
+  })();
 
   const handleMarkChange = (studentId, subjectId, value) => {
     if (!isAdmin() && !isCC(classId)) {
@@ -220,11 +227,11 @@ function EnterMarks() {
         {success && <SuccessMessage message={success} />}
 
         <div className="card">
-          {students.length === 0 || subjects.length === 0 ? (
+          {students.length === 0 || accessibleSubjects.length === 0 ? (
             <div className="text-center" style={{ padding: "40px 0", color: "#666" }}>
               <p>
                 {students.length === 0 && "No students found. "}
-                {subjects.length === 0 && "No subjects found. "}
+                {accessibleSubjects.length === 0 && "No subjects found or accessible. "}
               </p>
               <p>Please add students and subjects before entering marks.</p>
             </div>
@@ -234,7 +241,7 @@ function EnterMarks() {
                 <thead>
                   <tr>
                     <th style={{ minWidth: "150px" }}>Student</th>
-                    {subjects.map(sub => (
+                    {accessibleSubjects.map(sub => (
                       <th key={sub.id} className="text-center" style={{ minWidth: "120px" }}>
                         <div>{sub.name}</div>
                         <div style={{ fontSize: "12px", fontWeight: "normal", opacity: 0.7 }}>
@@ -253,7 +260,7 @@ function EnterMarks() {
                           {student.enrollmentNumber}
                         </div>
                       </td>
-                      {subjects.map(sub => (
+                      {accessibleSubjects.map(sub => (
                         <td key={sub.id} className="text-center">
                           {(() => {
                             const canEdit = isAdmin() || isCC(classId) ||

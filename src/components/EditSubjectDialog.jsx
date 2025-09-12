@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
 import { db } from "../firebaseConfig";
 
 function EditSubjectDialog({ open, onClose, subjectData, onUpdate, classId }) {
@@ -9,6 +9,9 @@ function EditSubjectDialog({ open, onClose, subjectData, onUpdate, classId }) {
   const [assignedTeacher, setAssignedTeacher] = useState("");
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // Store original teacher to compare later
+  const [originalTeacher, setOriginalTeacher] = useState("");
 
   useEffect(() => {
     if (open) {
@@ -22,6 +25,7 @@ function EditSubjectDialog({ open, onClose, subjectData, onUpdate, classId }) {
       setCode(subjectData.code || "");
       setTotalMarks(subjectData.totalMarks || 30);
       setAssignedTeacher(subjectData.assignedTeacher || "");
+      setOriginalTeacher(subjectData.assignedTeacher || "");
     }
   }, [subjectData]);
 
@@ -40,21 +44,54 @@ function EditSubjectDialog({ open, onClose, subjectData, onUpdate, classId }) {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!name.trim() || !code.trim()) {
       alert("Subject name and code are required.");
       return;
     }
-    
+
     const updatedData = {
       name: name.trim(),
       code: code.trim(),
       totalMarks: Number(totalMarks),
       assignedTeacher: assignedTeacher || null
     };
-    
-    onUpdate(subjectData.id, updatedData);
+
+    try {
+      // Call onUpdate to update the subject
+      await onUpdate(subjectData.id, updatedData);
+
+      // If the assigned teacher has changed, update the teacher's documents
+      if (assignedTeacher !== originalTeacher) {
+        // Remove from original teacher if exists
+        if (originalTeacher) {
+          const oldTeacherRef = doc(db, "users", originalTeacher);
+          await updateDoc(oldTeacherRef, {
+            assignedSubjects: arrayRemove({
+              classId: classId,
+              subjectId: subjectData.id
+            })
+          });
+        }
+
+        // Add to new teacher if assigned
+        if (assignedTeacher) {
+          const newTeacherRef = doc(db, "users", assignedTeacher);
+          await updateDoc(newTeacherRef, {
+            assignedSubjects: arrayUnion({
+              classId: classId,
+              subjectId: subjectData.id
+            })
+          });
+        }
+      }
+
+      onClose(); // Close dialog after updating
+    } catch (err) {
+      console.error("Error updating subject or teacher's assignments:", err);
+      alert("Something went wrong while updating the subject.");
+    }
   };
 
   if (!open) return null;

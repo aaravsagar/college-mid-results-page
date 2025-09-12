@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, arrayUnion } from "firebase/firestore";
 import { db } from "../firebaseConfig";
 
 function AddSubjectDialog({ open, onClose, onCreate, classId }) {
@@ -31,25 +31,45 @@ function AddSubjectDialog({ open, onClose, onCreate, classId }) {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!name.trim() || !code.trim()) {
       alert("Subject name and code are required.");
       return;
     }
-    
+
     const subjectData = {
       name: name.trim(),
       code: code.trim(),
       totalMarks: Number(totalMarks),
       assignedTeacher: assignedTeacher || null
     };
-    
-    onCreate(subjectData);
-    setName("");
-    setCode("");
-    setTotalMarks(30);
-    setAssignedTeacher("");
+
+    try {
+      // Create the subject and get its ID
+      const createdSubjectId = await onCreate(subjectData);
+
+      // If a teacher is assigned, update their document
+      if (assignedTeacher && createdSubjectId) {
+        const teacherRef = doc(db, "users", assignedTeacher);
+        await updateDoc(teacherRef, {
+          assignedSubjects: arrayUnion({
+            classId: classId,
+            subjectId: createdSubjectId
+          })
+        });
+      }
+
+      // Reset form fields
+      setName("");
+      setCode("");
+      setTotalMarks(30);
+      setAssignedTeacher("");
+      onClose(); // Close the dialog after successful submission
+    } catch (err) {
+      console.error("Error adding subject or updating teacher:", err);
+      alert("Something went wrong while adding the subject.");
+    }
   };
 
   if (!open) return null;
