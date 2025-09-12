@@ -303,16 +303,6 @@ function PublicResultView() {
               </div>
               
               <div className="text-center mt-3">
-                <button 
-                  onClick={() => {
-                    setResult(null);
-                    reset();
-                    refreshCaptcha();
-                  }}
-                  className="btn btn-secondary"
-                >
-                  Check Another Result
-                </button>
               </div>
             </div>
           </div>
