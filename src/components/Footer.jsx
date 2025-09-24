@@ -11,13 +11,12 @@ function Footer() {
               <li>244510316084 – Rishi Singh</li>
               <li>244510316085 – Aarav Sagar</li>
               <li>244510316086 – Arham Shah</li>
-              <li>244510316097 – Yash Suthar</li>
             </ul>
           </div>
           
           <div className="guide-section">
             <h4>Project Guide</h4>
-            <p>Guided By Happy Mistry Sir</p>
+            <p>Guided By Happy Mistry Sir & Palak Modi Mam</p>
           </div>
         </div>
       </div>

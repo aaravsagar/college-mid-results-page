@@ -19,7 +19,7 @@ function Header() {
         <div className="header-content">
           <div className="header-left">
             <h1 className="header-title" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>
-              Mid-Semester Results Portal
+             Sal Institute Of Diploma Studies Mid-Semester Results Portal
             </h1>
             
             {currentUser && (
